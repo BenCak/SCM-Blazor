@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="SCM3.Api/SCM3.Api.csproj" />
+  <Project Path="SCM3.AppHost/SCM3.AppHost.csproj" />
+  <Project Path="SCM3.Data/SCM3.Data.csproj" />
+  <Project Path="SCM3.ServiceDefaults/SCM3.ServiceDefaults.csproj" />
+  <Project Path="SCM3.Web/SCM3.Web.csproj" />
+</Solution>

@@ -1,0 +1,165 @@
+@page "/admin/db/systems"
+@attribute [Authorize(Roles = "SCM_Staff,SCM_Admin")]
+@rendermode InteractiveServer
+@inject ISystemService SystemService
+@inject ICustomerService CustomerService
+@inject IProductService ProductService
+
+@*
+    SCM DB Manager > Systems (root CLAUDE.md §8) — the Customer + Product combination
+    that tops the request hierarchy (§2, e.g. "Army Gray Eagle" = Army + Gray Eagle).
+    Customer/Product are foreign keys here, so this needs the lookup dropdowns that
+    Customers/Products.razor don't.
+*@
+<PageTitle>Systems · SCM3 Portal</PageTitle>
+
+<div class="scm3-admin-page">
+    <h1>Systems</h1>
+    <p class="scm3-muted">Customer + Product combinations that top the release hierarchy (e.g. "Army Gray Eagle").</p>
+
+    @if (_statusMessage is not null)
+    {
+        <p class="scm3-detail-status-message">@_statusMessage</p>
+    }
+
+    @if (_loading)
+    {
+        <p class="scm3-muted">Loading systems…</p>
+    }
+    else if (_customers.Count == 0 || _products.Count == 0)
+    {
+        <p class="scm3-muted">Add at least one Customer and Product before creating a System.</p>
+    }
+    else
+    {
+        <table class="scm3-simple-table">
+            <thead>
+                <tr><th>Name</th><th>Customer</th><th>Product</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var system in _systems)
+                {
+                    <tr>
+                        <td><input class="scm3-inline-input" @bind="system.Name" /></td>
+                        <td>
+                            <select class="scm3-inline-input" @bind="system.CustomerId">
+                                @foreach (var customer in _customers)
+                                {
+                                    <option value="@customer.CustomerId">@customer.Name</option>
+                                }
+                            </select>
+                        </td>
+                        <td>
+                            <select class="scm3-inline-input" @bind="system.ProductId">
+                                @foreach (var product in _products)
+                                {
+                                    <option value="@product.ProductId">@product.Name</option>
+                                }
+                            </select>
+                        </td>
+                        <td>
+                            <button type="button" class="scm3-action-btn scm3-action-primary" disabled="@_busy" @onclick="() => SaveAsync(system)">Save</button>
+                            <button type="button" class="scm3-action-btn scm3-action-danger" disabled="@_busy" @onclick="() => DeleteAsync(system)">Delete</button>
+                        </td>
+                    </tr>
+                }
+                <tr>
+                    <td><input class="scm3-inline-input" @bind="_newName" placeholder="New system name…" /></td>
+                    <td>
+                        <select class="scm3-inline-input" @bind="_newCustomerId">
+                            @foreach (var customer in _customers)
+                            {
+                                <option value="@customer.CustomerId">@customer.Name</option>
+                            }
+                        </select>
+                    </td>
+                    <td>
+                        <select class="scm3-inline-input" @bind="_newProductId">
+                            @foreach (var product in _products)
+                            {
+                                <option value="@product.ProductId">@product.Name</option>
+                            }
+                        </select>
+                    </td>
+                    <td><button type="button" class="scm3-action-btn scm3-action-primary" disabled="@(_busy || string.IsNullOrWhiteSpace(_newName))" @onclick="AddAsync">Add</button></td>
+                </tr>
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    private List<SystemEntity> _systems = [];
+    private List<Customer> _customers = [];
+    private List<Product> _products = [];
+
+    private string _newName = string.Empty;
+    private int _newCustomerId;
+    private int _newProductId;
+
+    private bool _loading = true;
+    private bool _busy;
+    private string? _statusMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        _customers = await CustomerService.GetAllAsync();
+        _products = await ProductService.GetAllAsync();
+        _newCustomerId = _customers.FirstOrDefault()?.CustomerId ?? 0;
+        _newProductId = _products.FirstOrDefault()?.ProductId ?? 0;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _systems = await SystemService.GetAllAsync();
+        _loading = false;
+    }
+
+    private async Task AddAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            var system = new SystemEntity { Name = _newName.Trim(), CustomerId = _newCustomerId, ProductId = _newProductId };
+            await SystemService.SaveAsync(system);
+            _newName = string.Empty;
+            await LoadAsync();
+            _statusMessage = $"Added \"{system.Name}\".";
+        });
+    }
+
+    private async Task SaveAsync(SystemEntity system)
+    {
+        await RunBusyAsync(async () =>
+        {
+            await SystemService.SaveAsync(system);
+            _statusMessage = $"Saved \"{system.Name}\".";
+        });
+    }
+
+    private async Task DeleteAsync(SystemEntity system)
+    {
+        await RunBusyAsync(async () =>
+        {
+            await SystemService.DeleteAsync(system.SystemId);
+            await LoadAsync();
+            _statusMessage = $"Deleted \"{system.Name}\".";
+        });
+    }
+
+    private async Task RunBusyAsync(Func<Task> action)
+    {
+        _busy = true;
+        _statusMessage = null;
+        try
+        {
+            await action();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

@@ -1,0 +1,114 @@
+@page "/admin/db/customers"
+@attribute [Authorize(Roles = "SCM_Staff,SCM_Admin")]
+@rendermode InteractiveServer
+@inject ICustomerService CustomerService
+
+@*
+    SCM DB Manager > Customers (root CLAUDE.md §8) — reference data feeding System
+    composition (§2 hierarchy: Customer + Product -> System). Simple inline list/add/
+    delete since Customer is just a soft-deletable name (root CLAUDE.md §16 recipe step 9
+    calls for "list + inline edit"; Telerik's Grid isn't available — see §1 trial note —
+    so this follows the same plain-table pattern as the rest of the admin area).
+*@
+<PageTitle>Customers · SCM3 Portal</PageTitle>
+
+<div class="scm3-admin-page">
+    <h1>Customers</h1>
+    <p class="scm3-muted">Reference data used when composing Systems (Customer + Product).</p>
+
+    @if (_statusMessage is not null)
+    {
+        <p class="scm3-detail-status-message">@_statusMessage</p>
+    }
+
+    @if (_loading)
+    {
+        <p class="scm3-muted">Loading customers…</p>
+    }
+    else
+    {
+        <table class="scm3-simple-table">
+            <thead>
+                <tr><th>Name</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var customer in _customers)
+                {
+                    <tr>
+                        <td><input class="scm3-inline-input" @bind="customer.Name" /></td>
+                        <td>
+                            <button type="button" class="scm3-action-btn scm3-action-primary" disabled="@_busy" @onclick="() => SaveAsync(customer)">Save</button>
+                            <button type="button" class="scm3-action-btn scm3-action-danger" disabled="@_busy" @onclick="() => DeleteAsync(customer)">Delete</button>
+                        </td>
+                    </tr>
+                }
+                <tr>
+                    <td><input class="scm3-inline-input" @bind="_newName" placeholder="New customer name…" /></td>
+                    <td><button type="button" class="scm3-action-btn scm3-action-primary" disabled="@(_busy || string.IsNullOrWhiteSpace(_newName))" @onclick="AddAsync">Add</button></td>
+                </tr>
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    private List<Customer> _customers = [];
+    private string _newName = string.Empty;
+    private bool _loading = true;
+    private bool _busy;
+    private string? _statusMessage;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _customers = await CustomerService.GetAllAsync();
+        _loading = false;
+    }
+
+    private async Task AddAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            var customer = new Customer { Name = _newName.Trim() };
+            await CustomerService.SaveAsync(customer);
+            _newName = string.Empty;
+            await LoadAsync();
+            _statusMessage = $"Added \"{customer.Name}\".";
+        });
+    }
+
+    private async Task SaveAsync(Customer customer)
+    {
+        await RunBusyAsync(async () =>
+        {
+            await CustomerService.SaveAsync(customer);
+            _statusMessage = $"Saved \"{customer.Name}\".";
+        });
+    }
+
+    private async Task DeleteAsync(Customer customer)
+    {
+        await RunBusyAsync(async () =>
+        {
+            await CustomerService.DeleteAsync(customer.CustomerId);
+            await LoadAsync();
+            _statusMessage = $"Deleted \"{customer.Name}\".";
+        });
+    }
+
+    private async Task RunBusyAsync(Func<Task> action)
+    {
+        _busy = true;
+        _statusMessage = null;
+        try
+        {
+            await action();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

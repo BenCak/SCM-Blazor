@@ -1,0 +1,756 @@
+/* Layout chrome overrides (root CLAUDE.md §7, §13) — the header bar, collapsible left
+   drawer (200px expanded / 50px collapsed), and content shell. Telerik component theming
+   itself comes from the scm3-gasi ThemeBuilder export (pending — Open Items §17.5); this
+   file only positions the app's own structural elements around it. */
+
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+.scm3-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.scm3-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    height: 3.5rem;
+    padding: 0 1rem;
+    background-color: var(--scm3-header-bg);
+    border-bottom: 1px solid #d6d5d5;
+    flex-shrink: 0;
+}
+
+.scm3-drawer-toggle {
+    border: none;
+    background: transparent;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+}
+
+    .scm3-drawer-toggle:hover {
+        background-color: rgba(0, 0, 0, 0.06);
+    }
+
+.scm3-brand {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--scm3-primary);
+}
+
+.scm3-header-spacer {
+    flex: 1;
+}
+
+.scm3-bell {
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+
+.scm3-user {
+    font-weight: 500;
+}
+
+.scm3-logout {
+    border: 1px solid var(--scm3-primary);
+    background: transparent;
+    color: var(--scm3-primary);
+    border-radius: 0.25rem;
+    padding: 0.35rem 0.75rem;
+    cursor: pointer;
+}
+
+    .scm3-logout:hover {
+        background-color: var(--scm3-primary);
+        color: #fff;
+    }
+
+.scm3-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+}
+
+.scm3-drawer {
+    background-color: var(--scm3-sidebar-bg);
+    color: #fff;
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex-shrink: 0;
+    transition: width 0.15s ease-in-out;
+}
+
+.scm3-drawer-expanded {
+    width: var(--scm3-expanded-w);
+}
+
+.scm3-drawer-collapsed {
+    width: var(--scm3-collapsed-w);
+}
+
+.scm3-content {
+    flex: 1;
+    overflow: auto;
+    padding: 1.5rem;
+}
+
+/* Drawer nav (NavMenu / SCM3NavLink — root CLAUDE.md §8) ------------------------------ */
+
+.scm3-nav {
+    padding: 0.5rem 0;
+}
+
+.scm3-nav-group {
+    margin-bottom: 0.75rem;
+}
+
+.scm3-nav-group-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.55);
+    padding: 0.5rem 0.75rem 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.scm3-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.75rem;
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+    .scm3-nav-link:hover {
+        background-color: rgba(255, 255, 255, 0.08);
+        color: #fff;
+    }
+
+    .scm3-nav-link.active {
+        background-color: var(--scm3-accent);
+        color: #fff;
+    }
+
+.scm3-nav-icon {
+    flex-shrink: 0;
+    width: 1.25rem;
+    text-align: center;
+}
+
+.scm3-nav-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Master-detail dashboard (root CLAUDE.md §7) — backs every "Release Artifacts" nav entry ---- */
+
+.scm3-dashboard {
+    display: flex;
+    gap: 1rem;
+    height: 100%;
+    min-height: 0;
+}
+
+.scm3-master-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    width: 380px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.scm3-master-toolbar {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+    .scm3-master-toolbar h1 {
+        font-size: 1.25rem;
+        margin: 0;
+    }
+
+.scm3-export-btn {
+    border: 1px solid var(--scm3-accent);
+    border-radius: 4px;
+    color: var(--scm3-accent);
+    padding: 0.3rem 0.6rem;
+    font-size: 0.85rem;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+    .scm3-export-btn:hover {
+        background-color: var(--scm3-accent);
+        color: #fff;
+    }
+
+.scm3-search-input {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.9rem;
+}
+
+.scm3-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.scm3-filter-group-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #666;
+}
+
+.scm3-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.scm3-chip {
+    border: 1px solid #ccc;
+    border-radius: 999px;
+    background: #fff;
+    padding: 0.25rem 0.7rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.scm3-chip-active {
+    background-color: var(--scm3-primary);
+    border-color: var(--scm3-primary);
+    color: #fff;
+}
+
+.scm3-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.scm3-request-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    text-align: left;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fff;
+    padding: 0.6rem 0.75rem;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+}
+
+    .scm3-request-card:hover {
+        border-color: var(--scm3-accent);
+    }
+
+.scm3-request-card-selected {
+    border-color: var(--scm3-primary);
+    background-color: #eaf2f8;
+}
+
+.scm3-request-card-row1 {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.scm3-request-card-icon {
+    font-size: 1.1rem;
+}
+
+.scm3-request-card-title {
+    font-weight: 600;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.scm3-request-card-row2,
+.scm3-request-card-row3 {
+    font-size: 0.8rem;
+    color: #555;
+    display: flex;
+    justify-content: space-between;
+}
+
+.scm3-request-card-notes {
+    white-space: nowrap;
+}
+
+.scm3-status-badge {
+    display: inline-block;
+    border-radius: 4px;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    background-color: #e5e8ec;
+    color: #333;
+}
+
+.scm3-status-draft { background-color: #e5e8ec; color: #444; }
+.scm3-status-pending { background-color: #fdebd0; color: #9a6a00; }
+.scm3-status-in-review { background-color: #d6eaf8; color: #1a5276; }
+.scm3-status-released { background-color: #d5f5e3; color: #1e8449; }
+.scm3-status-rejected { background-color: #fadbd8; color: #943126; }
+.scm3-status-terminated { background-color: #2c2c2c; color: #fff; }
+
+/* Detail panel ------------------------------------------------------------------------ */
+
+.scm3-detail-pane {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+}
+
+.scm3-detail-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #888;
+    border: 1px dashed #ccc;
+    border-radius: 6px;
+}
+
+.scm3-detail-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.scm3-detail-header {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fff;
+    padding: 0.9rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.scm3-detail-title {
+    margin: 0;
+}
+
+.scm3-detail-subtitle {
+    color: #666;
+    font-size: 0.9rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.5rem;
+}
+
+.scm3-detail-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.5rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.5rem;
+}
+
+.scm3-detail-info-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.scm3-detail-info-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #888;
+}
+
+.scm3-detail-status-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.scm3-detail-priority select {
+    margin-left: 0.3rem;
+}
+
+.scm3-detail-status-message {
+    border: 1px solid var(--scm3-accent);
+    border-radius: 4px;
+    background-color: #eaf2f8;
+    color: var(--scm3-primary);
+    padding: 0.4rem 0.7rem;
+    font-size: 0.85rem;
+}
+
+/* Actions bar ------------------------------------------------------------------------- */
+
+.scm3-actions-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fafafa;
+    padding: 0.5rem 0.75rem;
+}
+
+.scm3-actions-spacer {
+    flex: 1;
+}
+
+.scm3-action-btn {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #fff;
+    padding: 0.35rem 0.8rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+    .scm3-action-btn:disabled {
+        opacity: 0.6;
+        cursor: default;
+    }
+
+.scm3-action-primary {
+    border-color: var(--scm3-primary);
+    background-color: var(--scm3-primary);
+    color: #fff;
+}
+
+.scm3-action-success {
+    border-color: #1e8449;
+    background-color: #1e8449;
+    color: #fff;
+}
+
+.scm3-action-danger {
+    border-color: #943126;
+    background-color: #943126;
+    color: #fff;
+}
+
+.scm3-action-icon-btn {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #fff;
+    padding: 0.35rem 0.6rem;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+/* Tabs and tab content ---------------------------------------------------------------- */
+
+.scm3-tabs {
+    display: flex;
+    gap: 0.25rem;
+    border-bottom: 2px solid #ddd;
+}
+
+.scm3-tab {
+    border: none;
+    background: none;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: #555;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+}
+
+.scm3-tab-active {
+    color: var(--scm3-primary);
+    border-bottom-color: var(--scm3-primary);
+    font-weight: 600;
+}
+
+.scm3-tab-content {
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    background: #fff;
+    padding: 0.9rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.scm3-tab-controls {
+    display: flex;
+    gap: 1rem;
+}
+
+.scm3-link-btn {
+    border: none;
+    background: none;
+    color: var(--scm3-accent);
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0;
+}
+
+.scm3-muted {
+    color: #888;
+    font-size: 0.9rem;
+}
+
+/* Accordion sections ------------------------------------------------------------------ */
+
+.scm3-accordion-section {
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.scm3-accordion-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: #f5f6f7;
+    padding: 0.5rem 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.scm3-accordion-caret {
+    font-size: 0.7rem;
+    color: #888;
+}
+
+.scm3-accordion-body {
+    padding: 0.75rem;
+}
+
+.scm3-detail-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.6rem;
+}
+
+    .scm3-detail-fields > div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+    }
+
+/* Field subgroups and association/relationship tables within accordion bodies
+   (root CLAUDE.md §5 — e.g. "Requestor Information" nested under System Release's
+   Release Information, "Associations"/"Associated Items"/"DCNs" groups, etc.) */
+.scm3-field-subgroup,
+.scm3-attribute-group-set {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #eee;
+}
+
+.scm3-attribute-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.scm3-attribute-group-title {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #555;
+}
+
+.scm3-inline-input {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 0.25rem 0.4rem;
+    font-size: 0.9rem;
+}
+
+/* Tables, notes, SCM status ----------------------------------------------------------- */
+
+.scm3-simple-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+    .scm3-simple-table th,
+    .scm3-simple-table td {
+        text-align: left;
+        border-bottom: 1px solid #eee;
+        padding: 0.4rem 0.5rem;
+    }
+
+.scm3-note-composer {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+}
+
+    .scm3-note-composer textarea {
+        flex: 1;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        padding: 0.4rem 0.6rem;
+        font: inherit;
+        resize: vertical;
+    }
+
+.scm3-note-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+    .scm3-note-list > li {
+        border: 1px solid #eee;
+        border-radius: 6px;
+        padding: 0.5rem 0.7rem;
+    }
+
+.scm3-note-meta {
+    font-size: 0.8rem;
+    color: #666;
+    margin-bottom: 0.2rem;
+}
+
+.scm3-note-text {
+    white-space: pre-wrap;
+}
+
+.scm3-scm-status-edit {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1rem;
+    border-top: 1px solid #eee;
+    padding-top: 0.6rem;
+}
+
+    .scm3-scm-status-edit label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        font-size: 0.8rem;
+        color: #666;
+    }
+
+/* Slide-in panels (History / Change Log) — root CLAUDE.md §7 ---------------------------- */
+
+.scm3-slide-in {
+    position: fixed;
+    top: var(--scm3-header-h, 56px);
+    right: 0;
+    bottom: 0;
+    width: min(420px, 100%);
+    background: #fff;
+    border-left: 1px solid #ddd;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+    padding: 1rem;
+    overflow-y: auto;
+    z-index: 900;
+}
+
+.scm3-slide-in-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+    .scm3-slide-in-header h3 {
+        margin: 0;
+    }
+
+.scm3-timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+    .scm3-timeline > li {
+        display: flex;
+        gap: 0.6rem;
+    }
+
+.scm3-timeline-dot {
+    flex-shrink: 0;
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 50%;
+    margin-top: 0.3rem;
+}
+
+.scm3-timeline-body {
+    font-size: 0.85rem;
+}
+
+/* SCM DB Manager / Admin pages (root CLAUDE.md §8, §16) -------------------------------- */
+
+.scm3-admin-page {
+    max-width: 960px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.scm3-coming-soon {
+    border: 1px dashed #ccc;
+    border-radius: 6px;
+    padding: 1.5rem;
+    color: #888;
+}
+
+/* Carried over from the scaffold's MainLayout.razor.css — Blazor's reconnection/error UI ---- */
+
+#blazor-error-ui {
+    color-scheme: light only;
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+    #blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: 0.75rem;
+        top: 0.5rem;
+    }

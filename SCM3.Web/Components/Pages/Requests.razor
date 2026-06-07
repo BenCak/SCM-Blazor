@@ -1,0 +1,236 @@
+@page "/requests"
+@rendermode InteractiveServer
+@using System.Net
+@using System.Text
+@inject IRequestService RequestService
+@inject ICurrentUserService CurrentUser
+
+@*
+    Single-page master-detail dashboard (root CLAUDE.md §7) — the sole "Release
+    Artifacts" entry point (LHS-feedback redesign, 2026-06-07 replaced the old
+    per-type nav links / {Filter?} route with in-page multi-select Type + Status
+    filter chips, so any combination can be viewed without navigating away).
+    Selecting a card loads the detail panel on the right with no page navigation.
+*@
+<PageTitle>Release Artifacts</PageTitle>
+
+<div class="scm3-dashboard">
+    <section class="scm3-master-list">
+        <div class="scm3-master-toolbar">
+            <h1>Release Artifacts</h1>
+            <a class="scm3-export-btn" href="@ExportHref" download="@ExportFileName" title="Export the visible list to Excel">⬇ Export Excel</a>
+        </div>
+
+        <input class="scm3-search-input" value="@_searchText" @oninput="OnSearchInput"
+               placeholder="Search by name, ID, requestor, version, or parent…" />
+
+        <div class="scm3-filter-group">
+            <span class="scm3-filter-group-label">Type</span>
+            <div class="scm3-filter-chips">
+                @foreach (var typeName in TypeChips)
+                {
+                    <button type="button" class="scm3-chip @(_selectedTypes.Contains(typeName) ? "scm3-chip-active" : "")"
+                            @onclick="() => ToggleTypeFilter(typeName)">@typeName</button>
+                }
+            </div>
+        </div>
+
+        <div class="scm3-filter-group">
+            <span class="scm3-filter-group-label">Status</span>
+            <div class="scm3-filter-chips">
+                @foreach (var statusName in StatusChips)
+                {
+                    <button type="button" class="scm3-chip @(_selectedStatuses.Contains(statusName) ? "scm3-chip-active" : "")"
+                            @onclick="() => ToggleStatusFilter(statusName)">@statusName</button>
+                }
+            </div>
+        </div>
+
+        @if (_loading)
+        {
+            <p class="scm3-muted">Loading requests…</p>
+        }
+        else if (_visibleRequests.Count == 0)
+        {
+            <p class="scm3-muted">No requests match the current filters.</p>
+        }
+        else
+        {
+            <div class="scm3-card-list">
+                @foreach (var request in _visibleRequests)
+                {
+                    <RequestCard Request="request"
+                                 Selected="@(_selected?.RequestId == request.RequestId)"
+                                 NoteCount="@_noteCounts.GetValueOrDefault(request.RequestId)"
+                                 OnSelect="SelectAsync" />
+                }
+            </div>
+        }
+    </section>
+
+    <section class="scm3-detail-pane">
+        @if (_selected is not null)
+        {
+            <RequestDetailPanel @key="_selected.RequestId" Request="_selected" OnChanged="ReloadAsync" />
+        }
+        else
+        {
+            <div class="scm3-detail-empty">
+                <p>Select a request from the list to view its details.</p>
+            </div>
+        }
+    </section>
+</div>
+
+@code {
+    // Multi-select filter chip sources (LHS-feedback redesign, 2026-06-07 — replaces
+    // the old single-status chip row and the per-type nav links/{Filter?} route with
+    // in-page chips that can be combined freely: any selected Type OR's together,
+    // any selected Status OR's together, and the two groups AND together).
+    private static readonly string[] TypeChips =
+        ["System", "Segment", "CSCI GA-ASI", "CSCI Supplier", "EE Request", "TE Request", "Third Party SW"];
+
+    private static readonly string[] StatusChips = ["In Review", "Pending", "Released", "Draft"];
+
+    private List<Request> _allRequests = [];
+    private List<Request> _visibleRequests = [];
+    private Dictionary<int, int> _noteCounts = [];
+    private Request? _selected;
+
+    private string _searchText = string.Empty;
+    private readonly HashSet<string> _selectedTypes = [];
+    private readonly HashSet<string> _selectedStatuses = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        // Same render-timing fix as NavMenu/RequestDetailPanel (root CLAUDE.md §3) — this
+        // page can run its first OnParametersSetAsync before MainLayout's
+        // CurrentUser.LoadAsync() completes on this circuit's scope, which would make every
+        // role check below see a null CurrentUser and fall through to "show everything".
+        // LoadAsync is idempotent, so calling it again here is cheap once already populated.
+        await CurrentUser.LoadAsync();
+
+        // "View all requests" is Own-only for TE_User/EE_User per the permission matrix
+        // (root CLAUDE.md §4) — staff/admin always see everything regardless of role overlap.
+        var isStaff = CurrentUser.IsInRole("SCM_Staff", "SCM_Admin");
+        int? requestorFilter = !isStaff && CurrentUser.IsInRole("TE_User", "EE_User")
+            ? CurrentUser.CurrentUser?.UserId
+            : null;
+
+        _allRequests = await RequestService.GetAllAsync(requestorUserId: requestorFilter);
+
+        var noteCounts = await Task.WhenAll(_allRequests.Select(async r =>
+            (r.RequestId, Count: (await RequestService.GetNotesAsync(r.RequestId)).Count)));
+        _noteCounts = noteCounts.ToDictionary(c => c.RequestId, c => c.Count);
+
+        ApplyFilters();
+        _loading = false;
+    }
+
+    private void ApplyFilters()
+    {
+        IEnumerable<Request> query = _allRequests;
+
+        if (_selectedTypes.Count > 0)
+        {
+            query = query.Where(r => r.RequestType is not null && _selectedTypes.Contains(r.RequestType.Name));
+        }
+
+        if (_selectedStatuses.Count > 0)
+        {
+            query = query.Where(r => r.RequestStatus is not null && _selectedStatuses.Contains(r.RequestStatus.Name));
+        }
+
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            var term = _searchText.Trim();
+            query = query.Where(r =>
+                Matches(r.Title, term) ||
+                r.RequestId.ToString().Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                Matches(r.Requestor?.FullName, term) ||
+                Matches(r.Version, term) ||
+                Matches(r.ParentRequest?.Title, term));
+        }
+
+        _visibleRequests = query.ToList();
+        StateHasChanged();
+    }
+
+    private static bool Matches(string? value, string term)
+        => !string.IsNullOrEmpty(value) && value.Contains(term, StringComparison.OrdinalIgnoreCase);
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _searchText = e.Value?.ToString() ?? string.Empty;
+        ApplyFilters();
+    }
+
+    private void ToggleTypeFilter(string typeName)
+    {
+        if (!_selectedTypes.Remove(typeName))
+        {
+            _selectedTypes.Add(typeName);
+        }
+
+        ApplyFilters();
+    }
+
+    private void ToggleStatusFilter(string statusName)
+    {
+        if (!_selectedStatuses.Remove(statusName))
+        {
+            _selectedStatuses.Add(statusName);
+        }
+
+        ApplyFilters();
+    }
+
+    private async Task SelectAsync(int requestId)
+    {
+        _selected = await RequestService.GetByIdAsync(requestId);
+    }
+
+    private async Task ReloadAsync()
+    {
+        var selectedId = _selected?.RequestId;
+        await LoadAsync();
+        _selected = selectedId.HasValue ? await RequestService.GetByIdAsync(selectedId.Value) : null;
+    }
+
+    private const string ExportFileName = "Release-Artifacts.xls";
+
+    // Telerik's grid export (the mechanism CLAUDE.md names) doesn't apply to this
+    // card-based master list — this produces a real Excel-openable file via the
+    // well-known HTML-table + "application/vnd.ms-excel" MIME trick, with no JS
+    // interop or extra dependency required.
+    private string ExportHref
+    {
+        get
+        {
+            var html = new StringBuilder()
+                .Append("<table><tr><th>ID</th><th>Title</th><th>Version</th><th>Type</th><th>Status</th><th>Requestor</th><th>Date</th></tr>");
+
+            foreach (var r in _visibleRequests)
+            {
+                html.Append("<tr>")
+                    .Append($"<td>{r.RequestId}</td>")
+                    .Append($"<td>{WebUtility.HtmlEncode(r.Title)}</td>")
+                    .Append($"<td>{WebUtility.HtmlEncode(r.Version)}</td>")
+                    .Append($"<td>{WebUtility.HtmlEncode(r.RequestType?.Name)}</td>")
+                    .Append($"<td>{WebUtility.HtmlEncode(r.RequestStatus?.Name)}</td>")
+                    .Append($"<td>{WebUtility.HtmlEncode(r.Requestor?.FullName)}</td>")
+                    .Append($"<td>{r.LogDate:yyyy-MM-dd}</td>")
+                    .Append("</tr>");
+            }
+
+            html.Append("</table>");
+            return $"data:application/vnd.ms-excel;base64,{Convert.ToBase64String(Encoding.UTF8.GetBytes(html.ToString()))}";
+        }
+    }
+}

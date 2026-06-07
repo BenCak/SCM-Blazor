@@ -1,0 +1,33 @@
+@* List item card for the master-detail dashboard (root CLAUDE.md §7):
+     Request Name v4.2                       [In Review]
+     System · ID 3001 · Parent — · Requestor John Smith
+     2026-05-25                              💬 4
+   No type icon (LHS-feedback redesign, 2026-06-07) — the type name in row 2 already
+   identifies it, and chips now carry the type filtering that icons used to hint at. *@
+<button type="button" class="scm3-request-card @(Selected ? "scm3-request-card-selected" : "")" @onclick="() => OnSelect.InvokeAsync(Request.RequestId)">
+    <div class="scm3-request-card-row1">
+        <span class="scm3-request-card-title">@Request.Title @Request.Version</span>
+        <span class="scm3-status-badge @RequestDisplay.StatusCssClass(Request.RequestStatus?.Name)">@(Request.RequestStatus?.Name ?? "—")</span>
+    </div>
+    <div class="scm3-request-card-row2">
+        @Request.RequestType?.Name · ID @Request.RequestId · Parent @(Request.ParentRequest?.Title ?? "—") · Requestor @(Request.Requestor?.FullName ?? "—")
+    </div>
+    <div class="scm3-request-card-row3">
+        <span>@Request.LogDate.ToString("yyyy-MM-dd")</span>
+        <span class="scm3-request-card-notes">💬 @NoteCount</span>
+    </div>
+</button>
+
+@code {
+    [Parameter, EditorRequired]
+    public Request Request { get; set; } = default!;
+
+    [Parameter]
+    public bool Selected { get; set; }
+
+    [Parameter]
+    public int NoteCount { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnSelect { get; set; }
+}

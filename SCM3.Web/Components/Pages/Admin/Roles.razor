@@ -1,0 +1,67 @@
+@page "/admin/roles"
+@attribute [Authorize(Roles = "SCM_Admin")]
+
+@*
+    Admin > Roles & Permissions (root CLAUDE.md §4/§8) — read-only reference rendering of
+    the permission matrix straight from the planning doc. Roles are a single fixed column
+    on Users (§2 "one role per user — simple, not many-to-many"), so there's no separate
+    Role entity to manage here — this page exists to let SCM_Admin look up "who can do
+    what" without re-opening CLAUDE.md.
+*@
+<PageTitle>Roles & Permissions · SCM3 Portal</PageTitle>
+
+<div class="scm3-admin-page">
+    <h1>Roles & Permissions</h1>
+    <p class="scm3-muted">
+        Reference matrix (root CLAUDE.md §4) — roles are fixed and assigned one-per-user
+        under <a href="/admin/users">Manage Users</a>.
+    </p>
+
+    <table class="scm3-simple-table">
+        <thead>
+            <tr>
+                <th>Action</th>
+                <th>Viewer</th>
+                <th>TE_User</th>
+                <th>EE_User</th>
+                <th>SCM_Staff</th>
+                <th>SCM_Admin</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in Matrix)
+            {
+                <tr>
+                    <td>@row.Action</td>
+                    <td>@row.Viewer</td>
+                    <td>@row.TeUser</td>
+                    <td>@row.EeUser</td>
+                    <td>@row.ScmStaff</td>
+                    <td>@row.ScmAdmin</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private record PermissionRow(string Action, string Viewer, string TeUser, string EeUser, string ScmStaff, string ScmAdmin);
+
+    private static readonly PermissionRow[] Matrix =
+    [
+        new("View all requests", "✅", "Own only", "Own only", "✅", "✅"),
+        new("Create request", "❌", "TE only", "EE only", "✅", "✅"),
+        new("Edit request", "❌", "Own + Draft", "Own + Draft", "✅", "✅"),
+        new("Delete (soft)", "❌", "❌", "❌", "❌", "✅"),
+        new("Update SCM Status", "❌", "❌", "❌", "✅", "✅"),
+        new("Add notes", "❌", "Own only", "Own only", "✅", "✅"),
+        new("Approve / Reject", "❌", "❌", "❌", "❌", "✅"),
+        new("Release", "❌", "❌", "❌", "❌", "✅"),
+        new("Reopen", "❌", "❌", "❌", "❌", "✅"),
+        new("View History", "✅", "Own only", "Own only", "✅", "✅"),
+        new("View Change Log", "❌", "❌", "❌", "✅", "✅"),
+        new("SCM DB Manager", "❌", "❌", "❌", "✅", "✅"),
+        new("Admin menu", "❌", "❌", "❌", "❌", "✅"),
+        new("Manage Users", "❌", "❌", "❌", "❌", "✅"),
+    ];
+}

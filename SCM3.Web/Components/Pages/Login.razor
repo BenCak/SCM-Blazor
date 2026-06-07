@@ -1,0 +1,63 @@
+@page "/login"
+@layout SCM3.Web.Components.Layout.LoginLayout
+@using Microsoft.AspNetCore.Antiforgery
+@inject IAntiforgery Antiforgery
+
+<PageTitle>Sign In · SCM3 Portal</PageTitle>
+
+<div class="scm3-login-card">
+    <h1>SCM3 Portal</h1>
+    <p class="scm3-login-subtitle">General Atomics Aeronautical Systems — Software Configuration Management</p>
+
+    @if (ErrorFlag == "1")
+    {
+        <p class="scm3-login-error">Invalid username or password.</p>
+    }
+
+    @* Plain HTML form posting to the minimal-API /login endpoint in Program.cs — sign-in
+       writes an auth cookie to the HTTP response, which a Blazor Server circuit can't do
+       mid-render (root CLAUDE.md §3). The hidden field below is this page's antiforgery
+       token, issued via IAntiforgery so the [FromForm]-bound endpoint can validate it. *@
+    <form method="post" action="login" class="scm3-login-form">
+        <input type="hidden" name="@_antiforgeryTokens.FormFieldName" value="@_antiforgeryTokens.RequestToken" />
+        <input type="hidden" name="returnUrl" value="@ReturnUrl" />
+        <label>
+            Username
+            <input type="text" name="username" autocomplete="username" required />
+        </label>
+        <label>
+            Password
+            <input type="password" name="password" autocomplete="current-password" required />
+        </label>
+        <button type="submit">Sign In</button>
+    </form>
+
+    <div class="scm3-login-demo">
+        <p>Demo accounts — password is <code>test</code> for all:</p>
+        <ul>
+            <li><code>user</code> — Viewer</li>
+            <li><code>scm</code> — SCM_Staff</li>
+            <li><code>scmadmin</code> — SCM_Admin</li>
+            <li><code>teuser</code> — TE_User</li>
+            <li><code>eeuser</code> — EE_User</li>
+        </ul>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromQuery(Name = "error")]
+    private string? ErrorFlag { get; set; }
+
+    private AntiforgeryTokenSet _antiforgeryTokens = default!;
+
+    protected override void OnInitialized()
+    {
+        _antiforgeryTokens = Antiforgery.GetAndStoreTokens(HttpContext);
+    }
+}

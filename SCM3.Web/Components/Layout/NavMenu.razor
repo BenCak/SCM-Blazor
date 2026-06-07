@@ -1,0 +1,57 @@
+@inject ICurrentUserService CurrentUser
+
+<div class="scm3-nav">
+    <div class="scm3-nav-group">
+        <div class="scm3-nav-group-label">@(Expanded ? "Release Artifacts" : "📋")</div>
+        <SCM3NavLink Href="/requests" Icon="📋" Label="All Requests" Expanded="Expanded" />
+    </div>
+
+    <div class="scm3-nav-group">
+        <div class="scm3-nav-group-label">@(Expanded ? "Viewer Tools" : "🔧")</div>
+        <SCM3NavLink Href="/tools/lineage-tree" Icon="🌳" Label="Lineage Tree" Expanded="Expanded" />
+        <SCM3NavLink Href="/tools/release-documents" Icon="📄" Label="Release Documents" Expanded="Expanded" />
+        @if (CurrentUser.IsInRole("SCM_Staff", "SCM_Admin"))
+        {
+            <SCM3NavLink Href="/tools/release-tools" Icon="🚀" Label="Release Tools" Expanded="Expanded" />
+            <SCM3NavLink Href="/tools/compare-tools" Icon="🔍" Label="Compare Tools" Expanded="Expanded" />
+        }
+    </div>
+
+    @if (CurrentUser.IsInRole("SCM_Staff", "SCM_Admin"))
+    {
+        <div class="scm3-nav-group">
+            <div class="scm3-nav-group-label">@(Expanded ? "SCM DB Manager" : "🗄️")</div>
+            <SCM3NavLink Href="/admin/db/customers" Icon="🏢" Label="Customers" Expanded="Expanded" />
+            <SCM3NavLink Href="/admin/db/products" Icon="📦" Label="Products" Expanded="Expanded" />
+            <SCM3NavLink Href="/admin/db/systems" Icon="🖧" Label="Systems" Expanded="Expanded" />
+            <SCM3NavLink Href="/admin/db/csci-names" Icon="🧩" Label="CSCI Names" Expanded="Expanded" />
+            <SCM3NavLink Href="/admin/db/segment-names" Icon="🔗" Label="Segment Names" Expanded="Expanded" />
+            <SCM3NavLink Href="/admin/db/manufacturers" Icon="🏭" Label="Manufacturers" Expanded="Expanded" />
+            <SCM3NavLink Href="/admin/db/units" Icon="📐" Label="Units" Expanded="Expanded" />
+        </div>
+    }
+
+    @if (CurrentUser.IsInRole("SCM_Admin"))
+    {
+        <div class="scm3-nav-group">
+            <div class="scm3-nav-group-label">@(Expanded ? "Admin" : "⚙️")</div>
+            <SCM3NavLink Href="/admin/users" Icon="👤" Label="Manage Users" Expanded="Expanded" />
+            <SCM3NavLink Href="/admin/roles" Icon="🔐" Label="Roles & Permissions" Expanded="Expanded" />
+            <SCM3NavLink Href="/admin/settings" Icon="⚙️" Label="Settings" Expanded="Expanded" />
+        </div>
+    }
+</div>
+
+@code {
+    // Drives icon-only (collapsed, 50px) vs icon+label (expanded, 200px) display —
+    // root CLAUDE.md §8. Items only render at all if the current user's role grants
+    // access (no grayed-out items, per the doc).
+    [Parameter]
+    public bool Expanded { get; set; } = true;
+
+    // MainLayout also calls LoadAsync, but its completion doesn't trigger a re-render
+    // here (NavMenu's parameters haven't changed) — load independently so role checks
+    // below see a populated CurrentUser on NavMenu's own first render. LoadAsync is
+    // idempotent (no-ops once CurrentUser is set), so this is cheap either way.
+    protected override async Task OnInitializedAsync() => await CurrentUser.LoadAsync();
+}

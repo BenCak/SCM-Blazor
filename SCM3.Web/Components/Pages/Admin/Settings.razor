@@ -1,0 +1,8 @@
+@page "/admin/settings"
+@attribute [Authorize(Roles = "SCM_Admin")]
+
+<PageTitle>Settings · SCM3 Portal</PageTitle>
+
+<AdminComingSoon Title="Settings"
+                 Description="Portal-wide configuration — SMTP server, Telerik license, and GA-ASI brand/theme setup (root CLAUDE.md §17 Open Items)."
+                 StatusNote="Still TBD: GA-ASI SMTP server address (Open Item #3), Telerik license key setup (Open Item #4), and GA-ASI brand colors for ThemeBuilder (Open Item #5) — these are configured via user-secrets/environment variables, not a database-backed page, so this screen will surface read-only status once the values are confirmed." />

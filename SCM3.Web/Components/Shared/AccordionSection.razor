@@ -1,0 +1,31 @@
+@* Collapsible accordion section used in the detail panel's always-rendered single-page
+   layout (root CLAUDE.md §7) — parent owns the expanded/collapsed state so "Expand All"/
+   "Collapse All" controls work. Id renders as the outer element's id, giving the
+   anchor-link section nav above a scroll target (LHS-feedback redesign, 2026-06-07 —
+   replaced the old tab strip that switched between hidden tab panes). *@
+<div id="@Id" class="scm3-accordion-section">
+    <button type="button" class="scm3-accordion-header" @onclick="() => OnToggle.InvokeAsync()">
+        <span class="scm3-accordion-caret">@(Expanded ? "▼" : "▶")</span> @Title
+    </button>
+    @if (Expanded)
+    {
+        <div class="scm3-accordion-body">@ChildContent</div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string? Id { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool Expanded { get; set; }
+
+    [Parameter]
+    public EventCallback OnToggle { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

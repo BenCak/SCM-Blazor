@@ -1,0 +1,15 @@
+/home/ben/code/SCM3/SCM3.Data/bin/Debug/net10.0/SCM3.Data.deps.json
+/home/ben/code/SCM3/SCM3.Data/bin/Debug/net10.0/SCM3.Data.runtimeconfig.json
+/home/ben/code/SCM3/SCM3.Data/bin/Debug/net10.0/SCM3.Data.dll
+/home/ben/code/SCM3/SCM3.Data/bin/Debug/net10.0/SCM3.Data.pdb
+/home/ben/code/SCM3/SCM3.Data/obj/Debug/net10.0/SCM3.Data.csproj.AssemblyReference.cache
+/home/ben/code/SCM3/SCM3.Data/obj/Debug/net10.0/SCM3.Data.GeneratedMSBuildEditorConfig.editorconfig
+/home/ben/code/SCM3/SCM3.Data/obj/Debug/net10.0/SCM3.Data.AssemblyInfoInputs.cache
+/home/ben/code/SCM3/SCM3.Data/obj/Debug/net10.0/SCM3.Data.AssemblyInfo.cs
+/home/ben/code/SCM3/SCM3.Data/obj/Debug/net10.0/SCM3.Data.csproj.CoreCompileInputs.cache
+/home/ben/code/SCM3/SCM3.Data/obj/Debug/net10.0/SCM3.Data.sourcelink.json
+/home/ben/code/SCM3/SCM3.Data/obj/Debug/net10.0/SCM3.Data.dll
+/home/ben/code/SCM3/SCM3.Data/obj/Debug/net10.0/refint/SCM3.Data.dll
+/home/ben/code/SCM3/SCM3.Data/obj/Debug/net10.0/SCM3.Data.pdb
+/home/ben/code/SCM3/SCM3.Data/obj/Debug/net10.0/SCM3.Data.genruntimeconfig.cache
+/home/ben/code/SCM3/SCM3.Data/obj/Debug/net10.0/ref/SCM3.Data.dll

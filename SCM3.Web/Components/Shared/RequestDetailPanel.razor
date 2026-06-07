@@ -1,0 +1,947 @@
+@*
+    Detail panel for the master-detail dashboard (root CLAUDE.md §7): header strip,
+    role/state-driven actions bar, an anchor-link section nav, and a single scrollable
+    page of always-rendered accordion sections — Release Information, Relationships,
+    Attachments, SCM Status, Audit Log (LHS-feedback redesign, 2026-06-07 — replaces the
+    old tab strip that switched between hidden tab panes; clicking a nav link now just
+    scrolls the always-visible section into view). History / Change Log still open as
+    RHS slide-in panels from the actions bar. Inline editing here covers the fields
+    common to every request type (Title, Charge #, Priority) plus SCM Status; the
+    per-type Release Information / Relationships fields are rendered read-only from
+    the strongly-typed `SCM3.Data.Entities.Attributes` DTOs (root CLAUDE.md §5) — full
+    per-type editing forms are their own future task (they'd essentially be the New
+    Domain Entity create/edit forms, root CLAUDE.md §16).
+*@
+@using System.Text.Json
+@using SCM3.Data.Entities.Attributes
+@inject IRequestService RequestService
+@inject IUserService UserService
+@inject ICurrentUserService CurrentUser
+
+<div class="scm3-detail-panel">
+    <div class="scm3-detail-header">
+        <h2 class="scm3-detail-title">@Request.Title @Request.Version</h2>
+        <div class="scm3-detail-subtitle">@Request.RequestType?.Name · ID @Request.RequestId · Version @(Request.Version ?? "—")</div>
+
+        <div class="scm3-detail-info-grid">
+            <div class="scm3-detail-info-cell"><span class="scm3-detail-info-label">Requestor</span><span>@(Request.Requestor?.FullName ?? "—")</span></div>
+            <div class="scm3-detail-info-cell"><span class="scm3-detail-info-label">Email</span><span>@(Request.Requestor?.Email ?? "—")</span></div>
+            <div class="scm3-detail-info-cell">
+                <span class="scm3-detail-info-label">Charge #</span>
+                @if (ShowSave) { <input class="scm3-inline-input" @bind="_editChargeNumber" placeholder="—" /> }
+                else { <span>@(Request.ChargeNumber ?? "—")</span> }
+            </div>
+            <div class="scm3-detail-info-cell"><span class="scm3-detail-info-label">Date</span><span>@Request.LogDate.ToString("yyyy-MM-dd")</span></div>
+        </div>
+
+        <div class="scm3-detail-status-row">
+            <span class="scm3-status-badge @RequestDisplay.StatusCssClass(Request.RequestStatus?.Name)">STATUS: @(Request.RequestStatus?.Name ?? "—")</span>
+            <span class="scm3-detail-priority">
+                PRIORITY:
+                @if (ShowSave)
+                {
+                    <select @bind="_editPriority">
+                        <option value="">—</option>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                    </select>
+                }
+                else
+                {
+                    @(Request.Priority ?? "—")
+                }
+            </span>
+        </div>
+    </div>
+
+    @if (_statusMessage is not null)
+    {
+        <div class="scm3-detail-status-message">@_statusMessage</div>
+    }
+
+    <div class="scm3-actions-bar">
+        @if (ShowSave)
+        {
+            <button type="button" class="scm3-action-btn scm3-action-primary" disabled="@_busy" @onclick="SaveAsync">Save</button>
+        }
+        @if (ShowSubmit)
+        {
+            <button type="button" class="scm3-action-btn scm3-action-primary" disabled="@_busy" @onclick="SubmitAsync">Submit</button>
+        }
+        @if (ShowRequestMoreInfo)
+        {
+            <button type="button" class="scm3-action-btn" disabled="@_busy" @onclick="RequestMoreInfoAsync">Request More Info</button>
+        }
+        @if (ShowRelease)
+        {
+            <button type="button" class="scm3-action-btn scm3-action-success" disabled="@_busy" @onclick="ReleaseAsync">Release</button>
+        }
+        @if (ShowReject)
+        {
+            <button type="button" class="scm3-action-btn scm3-action-danger" disabled="@_busy" @onclick="RejectAsync">Reject</button>
+        }
+        @if (ShowTerminate)
+        {
+            <button type="button" class="scm3-action-btn scm3-action-danger" disabled="@_busy" @onclick="TerminateAsync">Terminate</button>
+        }
+        @if (ShowReopen)
+        {
+            <button type="button" class="scm3-action-btn" disabled="@_busy" @onclick="ReopenAsync">Reopen</button>
+        }
+
+        <span class="scm3-actions-spacer"></span>
+
+        <button type="button" class="scm3-action-icon-btn" title="History" @onclick="() => _showHistory = !_showHistory">🕐</button>
+        @if (CurrentUser.IsInRole("SCM_Staff", "SCM_Admin"))
+        {
+            <button type="button" class="scm3-action-icon-btn" title="Change Log" @onclick="() => _showChangeLog = !_showChangeLog">📋</button>
+        }
+    </div>
+
+    <nav class="scm3-tabs scm3-section-nav" aria-label="Jump to section">
+        <a class="scm3-tab" href="#@SectionId("release-info")">@ReleaseInformationTitle</a>
+        <a class="scm3-tab" href="#@SectionId("relationships")">Relationships</a>
+        <a class="scm3-tab" href="#@SectionId("attachments")">Attachments (@_attachments.Count)</a>
+        <a class="scm3-tab" href="#@SectionId("scm-status")">SCM Status</a>
+        <a class="scm3-tab" href="#@SectionId("audit-log")">Audit Log</a>
+    </nav>
+
+    <div class="scm3-tab-content">
+        <div class="scm3-tab-controls">
+            <button type="button" class="scm3-link-btn" @onclick="ExpandAllSections">Expand All</button>
+            <button type="button" class="scm3-link-btn" @onclick="CollapseAllSections">Collapse All</button>
+        </div>
+
+        <AccordionSection Id="@SectionId("release-info")" Title="@ReleaseInformationTitle" Expanded="@_sectionsExpanded["release-info"]" OnToggle='() => ToggleSection("release-info")'>
+            @switch (Request.RequestType?.Name)
+            {
+                case "System":
+                    <div class="scm3-detail-fields">
+                        @FieldDiv("Request ID", Request.RequestId.ToString())
+                        @FieldDiv("Customer", Request.System?.Customer?.Name)
+                        @FieldDiv("Product", Request.System?.Product?.Name)
+                        @FieldDiv("Name", Request.Title)
+                        @FieldDiv("Version", Request.Version)
+                        @FieldDiv("Parent Version", Request.ParentVersion)
+                        @FieldDiv("Priority", Request.Priority)
+                        @FieldDiv("Submission Date", FormatDate(Request.SubmittedDate))
+                        @FieldDiv("Ready Date", FormatDate(Request.ReadyDate))
+                        @FieldDiv("Need Date", FormatDate(Request.NeedDate))
+                        @FieldDiv("Release Date", FormatDate(Request.ReleaseDate))
+                        @FieldDiv("Release Description", Request.ReleaseDescription)
+                        @FieldDiv("Notes To SCM", Request.NotesToScm)
+                    </div>
+                    <div class="scm3-field-subgroup">
+                        <h4 class="scm3-attribute-group-title">Requestor Information</h4>
+                        <div class="scm3-detail-fields">
+                            @FieldDiv("Requestor Name", Request.RequestorName ?? Request.Requestor?.FullName)
+                            @FieldDiv("Requestor Email", Request.RequestorEmail ?? Request.Requestor?.Email)
+                            @FieldDiv("Requestor Phone", Request.RequestorPhone)
+                            @FieldDiv("Charge Number", Request.ChargeNumber)
+                        </div>
+                    </div>
+                    break;
+
+                case "Segment":
+                    <div class="scm3-detail-fields">
+                        @FieldDiv("Request ID", Request.RequestId.ToString())
+                        @FieldDiv("Name", Request.Title)
+                        @FieldDiv("Version", Request.Version)
+                        @FieldDiv("Parent System", Request.System?.Name)
+                        @FieldDiv("Submission Date", FormatDate(Request.SubmittedDate))
+                        @FieldDiv("Need Date", FormatDate(Request.NeedDate))
+                        @FieldDiv("Release Date", FormatDate(Request.ReleaseDate))
+                        @FieldDiv("Release Description", Request.ReleaseDescription)
+                        @FieldDiv("Notes To SCM", Request.NotesToScm)
+                    </div>
+                    break;
+
+                case "CSCI GA-ASI":
+                    <div class="scm3-detail-fields">
+                        @FieldDiv("Request ID", Request.RequestId.ToString())
+                        @FieldDiv("Submission Date", FormatDate(Request.SubmittedDate))
+                        @FieldDiv("Release Date", FormatDate(Request.ReleaseDate))
+                        @FieldDiv("Name", Request.Title)
+                        @FieldDiv("Version", Request.Version)
+                        @FieldDiv("Parent Version", Request.ParentVersion)
+                        @FieldDiv("Release Description", Request.ReleaseDescription)
+                        @FieldDiv("Notes To SCM", Request.NotesToScm)
+                        @FieldDiv("CSCI Only Release", _asiCsciAttrs is null ? null : YesNo(_asiCsciAttrs.CsciOnlyRelease))
+                    </div>
+                    <div class="scm3-field-subgroup">
+                        @RenderGroup("DCNs", _asiCsciAttrs?.Dcns ?? [], ("DCN Number", d => d.DcnNumber), ("Title", d => d.Title), ("Status", d => d.Status))
+                    </div>
+                    break;
+
+                case "CSCI Supplier":
+                    <div class="scm3-detail-fields">
+                        @FieldDiv("Request ID", Request.RequestId.ToString())
+                        @FieldDiv("Submission Date", FormatDate(Request.SubmittedDate))
+                        @FieldDiv("Release Date", FormatDate(Request.ReleaseDate))
+                        @FieldDiv("Name", Request.Title)
+                        @FieldDiv("Version", Request.Version)
+                        @FieldDiv("Software Point Of Contact", _supplierCsciAttrs?.SoftwarePointOfContact)
+                        @FieldDiv("Supplier", _supplierCsciAttrs?.Supplier)
+                        @FieldDiv("Supplier Point Of Contact", _supplierCsciAttrs?.SupplierPointOfContact)
+                        @FieldDiv("Supplier POC Phone", _supplierCsciAttrs?.SupplierPocPhone)
+                        @FieldDiv("Supplier POC Email", _supplierCsciAttrs?.SupplierPocEmail)
+                        @FieldDiv("Location", _supplierCsciAttrs?.Location)
+                        @FieldDiv("Release Description", Request.ReleaseDescription)
+                        @FieldDiv("Notes To SCM", Request.NotesToScm)
+                    </div>
+                    <div class="scm3-field-subgroup">
+                        @RenderGroup("DCNs", _supplierCsciAttrs?.Dcns ?? [], ("DCN Number", d => d.DcnNumber), ("Title", d => d.Title), ("Status", d => d.Status))
+                    </div>
+                    break;
+
+                case "Third Party SW":
+                    <div class="scm3-detail-fields">
+                        @FieldDiv("Request ID", Request.RequestId.ToString())
+                        @FieldDiv("Name", Request.Title)
+                        @FieldDiv("Version", Request.Version)
+                    </div>
+                    <div class="scm3-field-subgroup">
+                        <h4 class="scm3-attribute-group-title">Product Information</h4>
+                        <div class="scm3-detail-fields">
+                            @FieldDiv("Vendor", _thirdPartyAttrs?.Vendor)
+                            @FieldDiv("Product Name", _thirdPartyAttrs?.ProductName)
+                            @FieldDiv("Product Version", _thirdPartyAttrs?.ProductVersion)
+                            @FieldDiv("Country Of Origin", _thirdPartyAttrs?.CountryOfOrigin)
+                            @FieldDiv("Source", _thirdPartyAttrs?.Source)
+                            @FieldDiv("Product URL", _thirdPartyAttrs?.ProductUrl)
+                            @FieldDiv("Source Location", _thirdPartyAttrs?.SourceLocation)
+                            @FieldDiv("Internal Location", _thirdPartyAttrs?.InternalLocation)
+                            @FieldDiv("Download File Names", _thirdPartyAttrs?.DownloadFileNames)
+                            @FieldDiv("Download Location", _thirdPartyAttrs?.DownloadLocation)
+                            @FieldDiv("Intended Use", _thirdPartyAttrs?.IntendedUse)
+                            @FieldDiv("Platform", _thirdPartyAttrs?.Platform)
+                            @FieldDiv("Point Of Contact", _thirdPartyAttrs?.PointOfContact)
+                            @FieldDiv("Binary / Source / Both", _thirdPartyAttrs?.BinarySourceOrBoth)
+                        </div>
+                    </div>
+                    <div class="scm3-field-subgroup">
+                        <h4 class="scm3-attribute-group-title">Licensing</h4>
+                        <div class="scm3-detail-fields">
+                            @FieldDiv("License Type", _thirdPartyAttrs?.LicenseType)
+                            @FieldDiv("Product License", _thirdPartyAttrs?.ProductLicense)
+                            @FieldDiv("Contains OSS", _thirdPartyAttrs is null ? null : YesNo(_thirdPartyAttrs.ContainsOss))
+                            @FieldDiv("Patent", _thirdPartyAttrs?.Patent)
+                            @FieldDiv("Patent Non Assert Needed", _thirdPartyAttrs?.PatentNonAssertNeeded)
+                            @FieldDiv("Patent Non Assert Approval", _thirdPartyAttrs?.PatentNonAssertApproval)
+                            @FieldDiv("Software License Agreement", _thirdPartyAttrs?.SoftwareLicenseAgreement)
+                            @FieldDiv("License URL", _thirdPartyAttrs?.LicenseUrl)
+                            @FieldDiv("License Tracking Method", _thirdPartyAttrs?.LicenseTrackingMethod)
+                            @FieldDiv("OSS Obligations", _thirdPartyAttrs?.OssObligations)
+                            @FieldDiv("Export Compliance", _thirdPartyAttrs?.ExportCompliance)
+                            @FieldDiv("Manager Approval", _thirdPartyAttrs?.ManagerApproval)
+                            @FieldDiv("Approver", _thirdPartyAttrs?.Approver)
+                            @FieldDiv("Approval Date", FormatDate(_thirdPartyAttrs?.ApprovalDate))
+                            @FieldDiv("Status", _thirdPartyAttrs?.Status)
+                        </div>
+                    </div>
+                    break;
+
+                case "EE Request":
+                    <div class="scm3-detail-fields">
+                        @FieldDiv("Request ID", Request.RequestId.ToString())
+                        @FieldDiv("Part Number", _eeAttrs?.PartNumber)
+                        @FieldDiv("Assembly Part Number", _eeAttrs?.AssemblyPartNumber)
+                        @FieldDiv("Assembly Description", _eeAttrs?.AssemblyDescription)
+                        @FieldDiv("Data Rights", _eeAttrs?.DataRights)
+                        @FieldDiv("Change Notice", _eeAttrs?.ChangeNotice)
+                        @FieldDiv("Release Location", _eeAttrs?.ReleaseLocation)
+                        @FieldDiv("Charge Number", Request.ChargeNumber)
+                        @FieldDiv("Submission Date", FormatDate(Request.SubmittedDate))
+                        @FieldDiv("Need Date", FormatDate(Request.NeedDate))
+                        @FieldDiv("Release Date", FormatDate(Request.ReleaseDate))
+                        @FieldDiv("Release Description", Request.ReleaseDescription)
+                        @FieldDiv("Notes To SCM", Request.NotesToScm)
+                    </div>
+                    break;
+
+                default:
+                    <div class="scm3-detail-fields">
+                        @FieldDiv("Request ID", Request.RequestId.ToString())
+                        @FieldDiv("Name", Request.Title)
+                        @FieldDiv("Version", Request.Version)
+                        @FieldDiv("Submission Date", FormatDate(Request.SubmittedDate))
+                        @FieldDiv("Release Date", FormatDate(Request.ReleaseDate))
+                        @FieldDiv("Release Description", Request.ReleaseDescription)
+                        @FieldDiv("Notes To SCM", Request.NotesToScm)
+                    </div>
+                    <div class="scm3-field-subgroup">
+                        <h4 class="scm3-attribute-group-title">Type-Specific Details (legacy shape — TBD, root CLAUDE.md §17.1)</h4>
+                        @if (_attributeRows.Count == 0)
+                        {
+                            <p class="scm3-muted">No type-specific attributes recorded.</p>
+                        }
+                        else
+                        {
+                            <div class="scm3-detail-fields">
+                                @foreach (var (key, display) in _attributeRows)
+                                {
+                                    @FieldDiv(key, display)
+                                }
+                            </div>
+                        }
+                    </div>
+                    break;
+            }
+        </AccordionSection>
+
+        <AccordionSection Id="@SectionId("relationships")" Title="Relationships" Expanded="@_sectionsExpanded["relationships"]" OnToggle='() => ToggleSection("relationships")'>
+            @switch (Request.RequestType?.Name)
+            {
+                case "System":
+                    <div class="scm3-attribute-group-set">
+                        <h4 class="scm3-attribute-group-title">Associations</h4>
+                        @RenderGroup("Segments", _systemAttrs?.AssociatedSegments ?? [], ("Segment Name", s => s.SegmentName), ("Version", s => s.Version), ("State", s => s.State))
+                    </div>
+                    <div class="scm3-attribute-group-set">
+                        <h4 class="scm3-attribute-group-title">Associated Items</h4>
+                        @RenderGroup("Segments", _systemAttrs?.AssociatedItemSegments ?? [], ("Segment Name", s => s.SegmentName), ("Version", s => s.Version))
+                        @RenderGroup("Compatible Software", _systemAttrs?.CompatibleSoftware ?? [], ("Name", c => c.Name), ("Version", c => c.Version))
+                    </div>
+                    break;
+
+                case "Segment":
+                    <div class="scm3-attribute-group-set">
+                        <h4 class="scm3-attribute-group-title">Associations</h4>
+                        @RenderGroup("CSCIs", _segmentAttrs?.AssociatedCscis ?? [], ("CSCI Name", c => c.CsciName), ("Version", c => c.Version), ("State", c => c.State))
+                    </div>
+                    break;
+
+                case "CSCI GA-ASI":
+                    <div class="scm3-attribute-group-set">
+                        <h4 class="scm3-attribute-group-title">Associated Items</h4>
+                        @RenderGroup("Common Libraries", _asiCsciAttrs?.CommonLibraries ?? [], ("Library Name", l => l.LibraryName), ("Version", l => l.Version))
+                        @RenderGroup("Build Targets", _asiCsciAttrs?.BuildTargets ?? [], ("Build Target", b => b.BuildTarget), ("Platform", b => b.Platform))
+                        @RenderGroup("LRU Part Numbers", _asiCsciAttrs?.LruPartNumbers ?? [], ("Part Number", p => p.PartNumber), ("Description", p => p.Description))
+                        @RenderGroup("Associated Third Party Software", _asiCsciAttrs?.AssociatedThirdPartySoftware ?? [], ("Vendor", a => a.Vendor), ("Product", a => a.Product), ("Version", a => a.Version))
+                    </div>
+                    break;
+
+                case "CSCI Supplier":
+                    <div class="scm3-attribute-group-set">
+                        <h4 class="scm3-attribute-group-title">Associated Items</h4>
+                        @RenderGroup("Binary Checksums", _supplierCsciAttrs?.BinaryChecksums ?? [], ("Checksum", c => c.Checksum), ("Algorithm", c => c.Algorithm))
+                        @RenderGroup("LRE Part Numbers", _supplierCsciAttrs?.LrePartNumbers ?? [], ("Part Number", p => p.PartNumber), ("Description", p => p.Description))
+                    </div>
+                    break;
+
+                default:
+                    <p class="scm3-muted">@(Request.RequestType?.Name ?? "This artifact type") has no relationships to other release artifacts (root CLAUDE.md §5).</p>
+                    break;
+            }
+        </AccordionSection>
+
+        <AccordionSection Id="@SectionId("attachments")" Title="@($"Attachments ({_attachments.Count})")" Expanded="@_sectionsExpanded["attachments"]" OnToggle='() => ToggleSection("attachments")'>
+            <p class="scm3-muted">Upload categories for this artifact type: @AttachmentCategories</p>
+            @if (_attachments.Count == 0)
+            {
+                <p class="scm3-muted">No attachments yet.</p>
+            }
+            else
+            {
+                <table class="scm3-simple-table">
+                    <thead><tr><th>File</th><th>Size</th><th>Uploaded By</th><th>Date</th></tr></thead>
+                    <tbody>
+                        @foreach (var attachment in _attachments)
+                        {
+                            <tr>
+                                <td>@attachment.FileName</td>
+                                <td>@FormatFileSize(attachment.FileSizeBytes)</td>
+                                <td>@(attachment.UploadedBy?.FullName ?? "—")</td>
+                                <td>@attachment.LogDate.ToString("yyyy-MM-dd")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </AccordionSection>
+
+        <AccordionSection Id="@SectionId("scm-status")" Title="SCM Status" Expanded="@_sectionsExpanded["scm-status"]" OnToggle='() => ToggleSection("scm-status")'>
+            <div class="scm3-detail-fields">
+                @FieldDiv("Assigned To", _scmStatus?.AssignedTo?.FullName ?? "Unassigned")
+                @FieldDiv("SCM Status", _scmStatus?.Status)
+                @FieldDiv("Reviewer Notes", _scmStatus?.ReviewerNotes)
+                @FieldDiv("Comments", _scmStatus?.Comments)
+                @if (Request.RequestType?.Name == "System")
+                {
+                    @FieldDiv("Release Readiness Notes", _scmStatus?.ReleaseReadinessNotes)
+                }
+            </div>
+            <p class="scm3-muted">
+                Expected Completion Date · On Hold · Work Description · SCM Notes are named in
+                the field reference (root CLAUDE.md §5) but aren't yet columns on
+                <code>RequestSCMStatus</code> — see SCM3.Data/CLAUDE.md.
+            </p>
+
+            @if (CurrentUser.IsInRole("SCM_Staff", "SCM_Admin"))
+            {
+                <div class="scm3-scm-status-edit">
+                    <label>Assign to
+                        <select @bind="_scmAssigneeUserId">
+                            <option value="">Unassigned</option>
+                            @foreach (var user in _staffUsers)
+                            {
+                                <option value="@user.UserId">@user.FullName</option>
+                            }
+                        </select>
+                    </label>
+                    <label>Status
+                        <input class="scm3-inline-input" @bind="_scmStatusText" placeholder="e.g. In progress, Awaiting parts" />
+                    </label>
+                    <label>Reviewer Notes
+                        <textarea class="scm3-inline-input" @bind="_scmReviewerNotes" rows="2"></textarea>
+                    </label>
+                    <label>Comments
+                        <textarea class="scm3-inline-input" @bind="_scmComments" rows="2"></textarea>
+                    </label>
+                    @if (Request.RequestType?.Name == "System")
+                    {
+                        <label>Release Readiness Notes
+                            <textarea class="scm3-inline-input" @bind="_scmReleaseReadinessNotes" rows="2"></textarea>
+                        </label>
+                    }
+                    <button type="button" class="scm3-action-btn scm3-action-primary" disabled="@_busy" @onclick="SaveScmStatusAsync">Save SCM Status</button>
+                </div>
+            }
+        </AccordionSection>
+
+        <AccordionSection Id="@SectionId("audit-log")" Title="Audit Log" Expanded="@_sectionsExpanded["audit-log"]" OnToggle='() => ToggleSection("audit-log")'>
+            <div class="scm3-attribute-group">
+                <h4 class="scm3-attribute-group-title">State Changes</h4>
+                @if (_history.Count == 0)
+                {
+                    <p class="scm3-muted">No transitions recorded yet.</p>
+                }
+                else
+                {
+                    <ul class="scm3-timeline">
+                        @foreach (var entry in _history)
+                        {
+                            <li>
+                                <div class="scm3-timeline-dot @RequestDisplay.StatusCssClass(entry.ToStatus?.Name)"></div>
+                                <div class="scm3-timeline-body">
+                                    <div><strong>@(entry.FromStatus?.Name ?? "—") → @(entry.ToStatus?.Name ?? "—")</strong> · @entry.Action</div>
+                                    <div class="scm3-muted">@(entry.ActionBy?.FullName ?? "—") · @entry.LogDate.ToString("yyyy-MM-dd HH:mm")</div>
+                                    @if (!string.IsNullOrWhiteSpace(entry.Comment))
+                                    {
+                                        <div class="scm3-note-text">@entry.Comment</div>
+                                    }
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+
+            <div class="scm3-attribute-group-set">
+                <h4 class="scm3-attribute-group-title">Notes (@_notes.Count)</h4>
+                @if (CurrentUser.CanEdit(Request) || CurrentUser.IsInRole("SCM_Staff", "SCM_Admin"))
+                {
+                    <div class="scm3-note-composer">
+                        <textarea @bind="_newNoteText" placeholder="Add a note..." rows="2"></textarea>
+                        <button type="button" class="scm3-action-btn scm3-action-primary" disabled="@(_busy || string.IsNullOrWhiteSpace(_newNoteText))" @onclick="AddNoteAsync">Add</button>
+                    </div>
+                }
+
+                @if (_notes.Count == 0)
+                {
+                    <p class="scm3-muted">No notes yet.</p>
+                }
+                else
+                {
+                    <ul class="scm3-note-list">
+                        @foreach (var note in _notes)
+                        {
+                            <li>
+                                <div class="scm3-note-meta"><strong>@(note.Author?.FullName ?? "—")</strong> · @note.LogDate.ToString("yyyy-MM-dd HH:mm")</div>
+                                <div class="scm3-note-text">@note.NoteText</div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </AccordionSection>
+    </div>
+</div>
+
+@if (_showHistory)
+{
+    <div class="scm3-slide-in">
+        <div class="scm3-slide-in-header">
+            <h3>History</h3>
+            <button type="button" class="scm3-link-btn" @onclick="() => _showHistory = false">Close ✕</button>
+        </div>
+        @if (_history.Count == 0)
+        {
+            <p class="scm3-muted">No transitions recorded yet.</p>
+        }
+        else
+        {
+            <ul class="scm3-timeline">
+                @foreach (var entry in _history)
+                {
+                    <li>
+                        <div class="scm3-timeline-dot @RequestDisplay.StatusCssClass(entry.ToStatus?.Name)"></div>
+                        <div class="scm3-timeline-body">
+                            <div><strong>@(entry.FromStatus?.Name ?? "—") → @(entry.ToStatus?.Name ?? "—")</strong> · @entry.Action</div>
+                            <div class="scm3-muted">@(entry.ActionBy?.FullName ?? "—") · @entry.LogDate.ToString("yyyy-MM-dd HH:mm")</div>
+                            @if (!string.IsNullOrWhiteSpace(entry.Comment))
+                            {
+                                <div class="scm3-note-text">@entry.Comment</div>
+                            }
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+}
+
+@if (_showChangeLog)
+{
+    <div class="scm3-slide-in">
+        <div class="scm3-slide-in-header">
+            <h3>Change Log</h3>
+            <button type="button" class="scm3-link-btn" @onclick="() => _showChangeLog = false">Close ✕</button>
+        </div>
+        @if (_changeLog.Count == 0)
+        {
+            <p class="scm3-muted">No field changes recorded yet.</p>
+        }
+        else
+        {
+            <table class="scm3-simple-table">
+                <thead><tr><th>Field</th><th>Old</th><th>New</th><th>By</th><th>Date</th></tr></thead>
+                <tbody>
+                    @foreach (var entry in _changeLog)
+                    {
+                        <tr>
+                            <td>@entry.FieldName</td>
+                            <td>@(entry.OldValue ?? "—")</td>
+                            <td>@(entry.NewValue ?? "—")</td>
+                            <td>@(entry.ChangedBy?.FullName ?? "—")</td>
+                            <td>@entry.LogDate.ToString("yyyy-MM-dd HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public Request Request { get; set; } = default!;
+
+    // Lets the parent dashboard refresh the master list (status badge, filter counts)
+    // after an in-panel action mutates the selected request.
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    private int? _loadedForRequestId;
+
+    private List<RequestStatus> _statuses = [];
+    private List<RequestNote> _notes = [];
+    private List<RequestHistory> _history = [];
+    private List<RequestAttachment> _attachments = [];
+    private List<RequestChangeLog> _changeLog = [];
+    private List<User> _staffUsers = [];
+    private RequestSCMStatus? _scmStatus;
+
+    // TE Request has no Attributes DTO (root CLAUDE.md §5 / Open Item §17.1) — its
+    // CustomAttributes keeps the old free-form shape, shown via this generic
+    // key/value flattening inside its Release Information section.
+    private List<(string Key, string Display)> _attributeRows = [];
+
+    // Strongly-typed CustomAttributes for the six types the field reference covers
+    // (root CLAUDE.md §5) — populated from JSON in OnParametersSetAsync based on
+    // Request.RequestType.Name; only one is ever non-null per request.
+    private SystemReleaseAttributes? _systemAttrs;
+    private SegmentReleaseAttributes? _segmentAttrs;
+    private AsiCsciReleaseAttributes? _asiCsciAttrs;
+    private SupplierCsciReleaseAttributes? _supplierCsciAttrs;
+    private ThirdPartySoftwareAttributes? _thirdPartyAttrs;
+    private EeReleaseAttributes? _eeAttrs;
+
+    // All five sections render at all times now (anchor nav scrolls to them rather than
+    // switching tabs), so they default open — collapsing one is a deliberate user choice.
+    private readonly Dictionary<string, bool> _sectionsExpanded = new()
+    {
+        ["release-info"] = true,
+        ["relationships"] = true,
+        ["attachments"] = true,
+        ["scm-status"] = true,
+        ["audit-log"] = true
+    };
+
+    private bool _showHistory;
+    private bool _showChangeLog;
+    private bool _busy;
+    private string? _statusMessage;
+    private string _newNoteText = string.Empty;
+
+    private string _editTitle = string.Empty;
+    private string? _editChargeNumber;
+    private string? _editPriority;
+
+    private string _scmAssigneeUserId = string.Empty;
+    private string _scmStatusText = string.Empty;
+    private string _scmReviewerNotes = string.Empty;
+    private string _scmComments = string.Empty;
+    private string _scmReleaseReadinessNotes = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Same render-timing fix as NavMenu (root CLAUDE.md §3) — this component can be
+        // instantiated before MainLayout's CurrentUser.LoadAsync() completes on this
+        // circuit's scope, leaving role checks below seeing a null CurrentUser. LoadAsync
+        // is idempotent, so calling it again here is cheap once it's already populated.
+        await CurrentUser.LoadAsync();
+
+        if (_loadedForRequestId == Request.RequestId)
+        {
+            return;
+        }
+
+        _loadedForRequestId = Request.RequestId;
+        _showHistory = false;
+        _showChangeLog = false;
+        _statusMessage = null;
+        _editTitle = Request.Title;
+        _editChargeNumber = Request.ChargeNumber;
+        _editPriority = Request.Priority;
+
+        var statusesTask = RequestService.GetStatusesAsync();
+        var notesTask = RequestService.GetNotesAsync(Request.RequestId);
+        var historyTask = RequestService.GetHistoryAsync(Request.RequestId);
+        var attachmentsTask = RequestService.GetAttachmentsAsync(Request.RequestId);
+        var scmStatusTask = RequestService.GetScmStatusAsync(Request.RequestId);
+        var attributesTask = RequestService.GetAttributesAsync(Request.RequestId);
+        var staffUsersTask = CurrentUser.IsInRole("SCM_Staff", "SCM_Admin") ? UserService.GetAllAsync() : Task.FromResult(new List<User>());
+        var changeLogTask = CurrentUser.IsInRole("SCM_Staff", "SCM_Admin") ? RequestService.GetChangeLogAsync(Request.RequestId) : Task.FromResult(new List<RequestChangeLog>());
+
+        await Task.WhenAll(statusesTask, notesTask, historyTask, attachmentsTask, scmStatusTask, attributesTask, staffUsersTask, changeLogTask);
+
+        _statuses = statusesTask.Result;
+        _notes = notesTask.Result;
+        _history = historyTask.Result;
+        _attachments = attachmentsTask.Result;
+        _scmStatus = scmStatusTask.Result;
+        _changeLog = changeLogTask.Result;
+        _staffUsers = staffUsersTask.Result.Where(u => u.Role is "SCM_Staff" or "SCM_Admin").ToList();
+
+        var json = attributesTask.Result?.CustomAttributes;
+        _attributeRows = [];
+        _systemAttrs = null;
+        _segmentAttrs = null;
+        _asiCsciAttrs = null;
+        _supplierCsciAttrs = null;
+        _thirdPartyAttrs = null;
+        _eeAttrs = null;
+
+        switch (Request.RequestType?.Name)
+        {
+            case "System": _systemAttrs = DeserializeAttributes<SystemReleaseAttributes>(json); break;
+            case "Segment": _segmentAttrs = DeserializeAttributes<SegmentReleaseAttributes>(json); break;
+            case "CSCI GA-ASI": _asiCsciAttrs = DeserializeAttributes<AsiCsciReleaseAttributes>(json); break;
+            case "CSCI Supplier": _supplierCsciAttrs = DeserializeAttributes<SupplierCsciReleaseAttributes>(json); break;
+            case "Third Party SW": _thirdPartyAttrs = DeserializeAttributes<ThirdPartySoftwareAttributes>(json); break;
+            case "EE Request": _eeAttrs = DeserializeAttributes<EeReleaseAttributes>(json); break;
+            default: _attributeRows = ParseAttributes(json); break; // TE Request — no DTO yet (root CLAUDE.md §17.1)
+        }
+
+        _scmAssigneeUserId = _scmStatus?.AssignedToUserId?.ToString() ?? string.Empty;
+        _scmStatusText = _scmStatus?.Status ?? string.Empty;
+        _scmReviewerNotes = _scmStatus?.ReviewerNotes ?? string.Empty;
+        _scmComments = _scmStatus?.Comments ?? string.Empty;
+        _scmReleaseReadinessNotes = _scmStatus?.ReleaseReadinessNotes ?? string.Empty;
+    }
+
+    private bool IsOwner => CurrentUser.CurrentUser is not null && CurrentUser.CurrentUser.UserId == Request.RequestorUserId;
+    private bool CanActAsOwner => IsOwner || CurrentUser.IsInRole("SCM_Staff", "SCM_Admin");
+    private bool StatusIs(params string[] names) => Request.RequestStatus is not null && names.Contains(Request.RequestStatus.Name);
+
+    // Actions Bar visibility (root CLAUDE.md §6) — combines the "Visible To" and
+    // "Available When" columns since a button that's visible-but-unavailable would
+    // contradict the inline-editing/no-disabled-clutter style of the rest of the UI.
+    private bool ShowSave => CanActAsOwner && StatusIs("Draft", "In Review");
+    private bool ShowSubmit => CanActAsOwner && StatusIs("Draft");
+    private bool ShowRequestMoreInfo => CurrentUser.IsInRole("SCM_Staff", "SCM_Admin") && StatusIs("Pending", "In Review");
+    private bool ShowRelease => CurrentUser.IsInRole("SCM_Admin") && StatusIs("In Review");
+    private bool ShowReject => CurrentUser.IsInRole("SCM_Admin") && StatusIs("In Review");
+    private bool ShowTerminate => CurrentUser.IsInRole("SCM_Admin") && StatusIs("Pending", "In Review");
+    private bool ShowReopen => CurrentUser.IsInRole("SCM_Admin") && StatusIs("Released");
+
+    private async Task SaveAsync()
+    {
+        Request.Title = _editTitle;
+        Request.ChargeNumber = _editChargeNumber;
+        Request.Priority = _editPriority;
+
+        await RunBusyAsync(async () =>
+        {
+            await RequestService.SaveAsync(Request);
+            _statusMessage = "Saved.";
+            await OnChanged.InvokeAsync();
+        });
+    }
+
+    private Task SubmitAsync() => TransitionAsync("Pending", "Submit");
+    private Task ReleaseAsync() => TransitionAsync("Released", "Release");
+    private Task RejectAsync() => TransitionAsync("Rejected", "Reject");
+    private Task TerminateAsync() => TransitionAsync("Terminated", "Terminate");
+    private Task ReopenAsync() => TransitionAsync("In Review", "Reopen");
+
+    private async Task TransitionAsync(string toStatusName, string action)
+    {
+        var toStatus = _statuses.FirstOrDefault(s => s.Name == toStatusName);
+        if (toStatus is null || CurrentUser.CurrentUser is null)
+        {
+            return;
+        }
+
+        await RunBusyAsync(async () =>
+        {
+            await RequestService.ChangeStatusAsync(Request.RequestId, toStatus.RequestStatusId, action, CurrentUser.CurrentUser.UserId);
+
+            // Reflect the transition immediately — ChangeStatusAsync only persists
+            // RequestStatusId server-side, the local navigation property needs updating
+            // too so the header badge and actions bar re-evaluate without a full reload.
+            Request.RequestStatusId = toStatus.RequestStatusId;
+            Request.RequestStatus = toStatus;
+            _history = await RequestService.GetHistoryAsync(Request.RequestId);
+            _statusMessage = $"{action}: now {toStatus.Name}.";
+            await OnChanged.InvokeAsync();
+        });
+    }
+
+    private async Task RequestMoreInfoAsync()
+    {
+        if (CurrentUser.CurrentUser is null)
+        {
+            return;
+        }
+
+        await RunBusyAsync(async () =>
+        {
+            await RequestService.AddNoteAsync(new RequestNote
+            {
+                RequestId = Request.RequestId,
+                AuthorUserId = CurrentUser.CurrentUser.UserId,
+                NoteText = "Requesting more information from the requestor — see notes for details."
+            });
+            _notes = await RequestService.GetNotesAsync(Request.RequestId);
+            _statusMessage = "Requested more info — a note was added for the requestor (see Audit Log).";
+        });
+    }
+
+    private async Task AddNoteAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_newNoteText) || CurrentUser.CurrentUser is null)
+        {
+            return;
+        }
+
+        var text = _newNoteText.Trim();
+        await RunBusyAsync(async () =>
+        {
+            await RequestService.AddNoteAsync(new RequestNote
+            {
+                RequestId = Request.RequestId,
+                AuthorUserId = CurrentUser.CurrentUser.UserId,
+                NoteText = text
+            });
+            _newNoteText = string.Empty;
+            _notes = await RequestService.GetNotesAsync(Request.RequestId);
+        });
+    }
+
+    private async Task SaveScmStatusAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            var assignedToUserId = int.TryParse(_scmAssigneeUserId, out var id) ? id : (int?)null;
+            await RequestService.SaveScmStatusAsync(new RequestSCMStatus
+            {
+                RequestSCMStatusId = _scmStatus?.RequestSCMStatusId ?? 0,
+                RequestId = Request.RequestId,
+                AssignedToUserId = assignedToUserId,
+                Status = string.IsNullOrWhiteSpace(_scmStatusText) ? null : _scmStatusText.Trim(),
+                ReviewerNotes = string.IsNullOrWhiteSpace(_scmReviewerNotes) ? null : _scmReviewerNotes.Trim(),
+                Comments = string.IsNullOrWhiteSpace(_scmComments) ? null : _scmComments.Trim(),
+                ReleaseReadinessNotes = string.IsNullOrWhiteSpace(_scmReleaseReadinessNotes) ? null : _scmReleaseReadinessNotes.Trim()
+            });
+            _scmStatus = await RequestService.GetScmStatusAsync(Request.RequestId);
+            _statusMessage = "SCM status saved.";
+        });
+    }
+
+    private async Task RunBusyAsync(Func<Task> action)
+    {
+        _busy = true;
+        _statusMessage = null;
+        try
+        {
+            await action();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void ToggleSection(string key) => _sectionsExpanded[key] = !_sectionsExpanded[key];
+    private void ExpandAllSections() { foreach (var key in _sectionsExpanded.Keys.ToList()) _sectionsExpanded[key] = true; }
+    private void CollapseAllSections() { foreach (var key in _sectionsExpanded.Keys.ToList()) _sectionsExpanded[key] = false; }
+
+    private static List<(string Key, string Display)> ParseAttributes(string? json)
+    {
+        var rows = new List<(string, string)>();
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return rows;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                rows.Add((property.Name, FormatJsonValue(property.Value)));
+            }
+        }
+        catch (JsonException)
+        {
+            // CustomAttributes is free-form per type (root CLAUDE.md §5) — malformed/empty
+            // JSON simply renders no rows rather than surfacing a parse error to the user.
+        }
+
+        return rows;
+    }
+
+    private static string FormatJsonValue(JsonElement value) => value.ValueKind switch
+    {
+        JsonValueKind.Array => value.GetArrayLength() == 0 ? "—" : string.Join(", ", value.EnumerateArray().Select(FormatJsonValue)),
+        JsonValueKind.True or JsonValueKind.False => value.GetBoolean() ? "Yes" : "No",
+        JsonValueKind.Null or JsonValueKind.Undefined => "—",
+        JsonValueKind.String => value.GetString() is { Length: > 0 } s ? s : "—",
+        _ => value.ToString()
+    };
+
+    private static string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024)
+        {
+            return $"{bytes} B";
+        }
+
+        if (bytes < 1024 * 1024)
+        {
+            return $"{bytes / 1024.0:0.#} KB";
+        }
+
+        return $"{bytes / (1024.0 * 1024.0):0.#} MB";
+    }
+
+    // Anchor-link section nav targets (LHS-feedback redesign, 2026-06-07) — every
+    // AccordionSection below renders one of these as its outer element's id, so the
+    // nav links at the top of the panel can scroll straight to it.
+    private static string SectionId(string key) => $"scm3-section-{key}";
+
+    // Every type but Third Party SW calls this section "Release Information" — Third
+    // Party SW's Product Information / Licensing groups render *inside* the same
+    // section/anchor slot instead (root CLAUDE.md §5 note: "these two replace Release
+    // Information for this type"), keeping the five-section layout uniform across types
+    // per the redesign brief rather than branching the section list itself.
+    private const string ReleaseInformationTitle = "Release Information";
+
+    private static string FormatDate(DateTime? value) => value?.ToString("yyyy-MM-dd") ?? "—";
+
+    private static string YesNo(bool value) => value ? "Yes" : "No";
+    private static string? YesNo(bool? value) => value switch { true => "Yes", false => "No", null => null };
+
+    private static readonly JsonSerializerOptions AttributesJsonOptions = new() { PropertyNameCaseInsensitive = true };
+
+    private static T? DeserializeAttributes<T>(string? json) where T : class
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<T>(json, AttributesJsonOptions);
+        }
+        catch (JsonException)
+        {
+            // Same tolerant handling as ParseAttributes below — CustomAttributes is
+            // free-form per type (root CLAUDE.md §5); malformed JSON renders an empty
+            // section rather than surfacing a parse error to the user.
+            return null;
+        }
+    }
+
+    // Renders one labelled value matching the .scm3-detail-fields grid — the building
+    // block for every per-type Release Information / Relationships field list below.
+    private static RenderFragment FieldDiv(string label, string? value) => @<div>
+        <span class="scm3-detail-info-label">@label</span><span>@(string.IsNullOrWhiteSpace(value) ? "—" : value)</span>
+    </div>;
+
+    // Renders one named Associations / Associated Items / DCNs / etc. group as a small
+    // table — shared across all the per-type Relationships and nested Release
+    // Information groups in root CLAUDE.md §5, parameterized by row type + columns so
+    // each call site only needs to name its headers and pick the DTO properties.
+    private static RenderFragment RenderGroup<T>(string title, IReadOnlyList<T> rows, params (string Header, Func<T, string?> Value)[] columns) => @<div class="scm3-attribute-group">
+        <h4 class="scm3-attribute-group-title">@title</h4>
+        @if (rows.Count == 0)
+        {
+            <p class="scm3-muted">None recorded.</p>
+        }
+        else
+        {
+            <table class="scm3-simple-table">
+                <thead>
+                    <tr>
+                        @foreach (var column in columns)
+                        {
+                            <th>@column.Header</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in rows)
+                    {
+                        <tr>
+                            @foreach (var column in columns)
+                            {
+                                <td>@(column.Value(row) ?? "—")</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>;
+
+    // Attachment categories are named per artifact type in the field reference (root
+    // CLAUDE.md §5), but RequestAttachment has no Category column to bucket real
+    // uploads by — listing the type's named slots alongside the flat upload table is
+    // honest about that gap rather than fabricating a categorization the schema can't
+    // back yet.
+    private string AttachmentCategories => Request.RequestType?.Name switch
+    {
+        "System" => "SVD · SVM · Supporting Documents",
+        "Segment" => "Supporting Documents",
+        "CSCI GA-ASI" => "Release Notes · Checksums · Build Manifest · Supporting Documents",
+        "CSCI Supplier" => "Supplier Release Package · Checksums · Supporting Documents",
+        "Third Party SW" => "Licensing Documents · Approval Documents · Supporting Documents",
+        "EE Request" => "Drawings · Supporting Documents",
+        _ => "Supporting Documents"
+    };
+}

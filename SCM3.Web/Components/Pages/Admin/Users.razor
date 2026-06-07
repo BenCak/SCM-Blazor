@@ -1,0 +1,89 @@
+@page "/admin/users"
+@attribute [Authorize(Roles = "SCM_Admin")]
+@rendermode InteractiveServer
+@inject IUserService UserService
+
+@*
+    Admin > Manage Users (root CLAUDE.md §4/§8) — SCM_Admin-only. Lets admins fix the
+    role assigned to AD-synced users; the auto-create-on-first-login flow (§3) seeds new
+    users as "Viewer" and notifies SCM_Admin to come adjust them here.
+*@
+<PageTitle>Manage Users · SCM3 Portal</PageTitle>
+
+<div class="scm3-admin-page">
+    <h1>Manage Users</h1>
+    <p class="scm3-muted">Roles and contact info for every AD-synced user (root CLAUDE.md §3 — new logins are auto-created here as Viewer).</p>
+
+    @if (_statusMessage is not null)
+    {
+        <p class="scm3-detail-status-message">@_statusMessage</p>
+    }
+
+    @if (_loading)
+    {
+        <p class="scm3-muted">Loading users…</p>
+    }
+    else
+    {
+        <table class="scm3-simple-table">
+            <thead>
+                <tr><th>Username</th><th>Full Name</th><th>Email</th><th>Department</th><th>Role</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var user in _users)
+                {
+                    <tr>
+                        <td>@user.Username</td>
+                        <td><input class="scm3-inline-input" @bind="user.FullName" /></td>
+                        <td><input class="scm3-inline-input" @bind="user.Email" /></td>
+                        <td><input class="scm3-inline-input" @bind="user.Department" /></td>
+                        <td>
+                            <select class="scm3-inline-input" @bind="user.Role">
+                                @foreach (var role in Roles)
+                                {
+                                    <option value="@role">@role</option>
+                                }
+                            </select>
+                        </td>
+                        <td>
+                            <button type="button" class="scm3-action-btn scm3-action-primary" disabled="@_busy" @onclick="() => SaveAsync(user)">Save</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    private static readonly string[] Roles = ["Viewer", "TE_User", "EE_User", "SCM_Staff", "SCM_Admin"];
+
+    private List<User> _users = [];
+    private bool _loading = true;
+    private bool _busy;
+    private string? _statusMessage;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _users = await UserService.GetAllAsync();
+        _loading = false;
+    }
+
+    private async Task SaveAsync(User user)
+    {
+        _busy = true;
+        _statusMessage = null;
+        try
+        {
+            await UserService.SaveAsync(user);
+            _statusMessage = $"Saved \"{user.FullName}\" — role: {user.Role}.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

@@ -1,0 +1,47 @@
+@inherits LayoutComponentBase
+@inject ICurrentUserService CurrentUser
+
+<div class="scm3-shell">
+    <header class="scm3-header">
+        <button class="scm3-drawer-toggle" type="button" @onclick="ToggleDrawer"
+                title="@(_expanded ? "Collapse navigation" : "Expand navigation")"
+                aria-label="Toggle navigation">
+            ☰
+        </button>
+        <span class="scm3-brand">SCM3 Portal</span>
+        <div class="scm3-header-spacer"></div>
+        <span class="scm3-bell" title="Notifications" aria-hidden="true">🔔</span>
+        <span class="scm3-user">@(CurrentUser.CurrentUser?.FullName ?? "Guest")</span>
+        <form method="post" action="logout">
+            <button type="submit" class="scm3-logout">Sign Out</button>
+        </form>
+    </header>
+
+    <div class="scm3-body">
+        <nav class="scm3-drawer @(_expanded ? "scm3-drawer-expanded" : "scm3-drawer-collapsed")">
+            <NavMenu Expanded="_expanded" />
+        </nav>
+
+        <main class="scm3-content">
+            @Body
+        </main>
+    </div>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    // Expanded = 200px with labels, collapsed = 50px icons-only (root CLAUDE.md §8).
+    private bool _expanded = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CurrentUser.LoadAsync();
+    }
+
+    private void ToggleDrawer() => _expanded = !_expanded;
+}

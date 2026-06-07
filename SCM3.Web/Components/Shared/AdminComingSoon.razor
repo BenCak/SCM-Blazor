@@ -1,0 +1,22 @@
+@* Stub for SCM DB Manager / Admin nav entries whose backing entity or spec is still TBD
+   (root CLAUDE.md §17 Open Items) — keeps every nav link landing on a real, role-gated
+   page rather than a 404, without faking CRUD over data that doesn't exist yet. Once an
+   entity lands, replace its page with a real list per the New Domain Entity Recipe (§16). *@
+<div class="scm3-admin-page">
+    <h1>@Title</h1>
+    <p class="scm3-muted">@Description</p>
+    <div class="scm3-coming-soon">
+        <p>@StatusNote</p>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Description { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string StatusNote { get; set; } = string.Empty;
+}

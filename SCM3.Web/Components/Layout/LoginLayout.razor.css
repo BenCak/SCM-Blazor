@@ -1,0 +1,84 @@
+.scm3-login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, var(--scm3-sidebar-bg, #1c2833) 0%, var(--scm3-primary, #1a5276) 100%);
+    padding: 1rem;
+}
+
+::deep .scm3-login-card {
+    background: #fff;
+    border-radius: 0.5rem;
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.25);
+    padding: 2rem;
+    width: 100%;
+    max-width: 26rem;
+}
+
+::deep .scm3-login-card h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--scm3-primary, #1a5276);
+}
+
+::deep .scm3-login-subtitle {
+    margin: 0.25rem 0 1.5rem;
+    color: #5a6470;
+    font-size: 0.9rem;
+}
+
+::deep .scm3-login-form label {
+    display: block;
+    margin-bottom: 0.85rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+::deep .scm3-login-form input {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid #c9d0d6;
+    border-radius: 0.25rem;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+::deep .scm3-login-form button {
+    width: 100%;
+    padding: 0.6rem;
+    border: none;
+    border-radius: 0.25rem;
+    background-color: var(--scm3-primary, #1a5276);
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+::deep .scm3-login-form button:hover {
+    background-color: var(--scm3-accent, #2e86c1);
+}
+
+::deep .scm3-login-error {
+    background: #fdecea;
+    color: #a33a2f;
+    border-radius: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+::deep .scm3-login-demo {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e3e7ea;
+    font-size: 0.825rem;
+    color: #5a6470;
+}
+
+::deep .scm3-login-demo ul {
+    margin: 0.4rem 0 0;
+    padding-left: 1.1rem;
+}

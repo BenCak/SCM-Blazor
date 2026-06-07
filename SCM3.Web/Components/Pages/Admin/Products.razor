@@ -1,0 +1,111 @@
+@page "/admin/db/products"
+@attribute [Authorize(Roles = "SCM_Staff,SCM_Admin")]
+@rendermode InteractiveServer
+@inject IProductService ProductService
+
+@*
+    SCM DB Manager > Products (root CLAUDE.md §8) — mirrors Customers.razor; Product is
+    the same soft-deletable name shape feeding System composition (§2 hierarchy).
+*@
+<PageTitle>Products · SCM3 Portal</PageTitle>
+
+<div class="scm3-admin-page">
+    <h1>Products</h1>
+    <p class="scm3-muted">Reference data used when composing Systems (Customer + Product).</p>
+
+    @if (_statusMessage is not null)
+    {
+        <p class="scm3-detail-status-message">@_statusMessage</p>
+    }
+
+    @if (_loading)
+    {
+        <p class="scm3-muted">Loading products…</p>
+    }
+    else
+    {
+        <table class="scm3-simple-table">
+            <thead>
+                <tr><th>Name</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var product in _products)
+                {
+                    <tr>
+                        <td><input class="scm3-inline-input" @bind="product.Name" /></td>
+                        <td>
+                            <button type="button" class="scm3-action-btn scm3-action-primary" disabled="@_busy" @onclick="() => SaveAsync(product)">Save</button>
+                            <button type="button" class="scm3-action-btn scm3-action-danger" disabled="@_busy" @onclick="() => DeleteAsync(product)">Delete</button>
+                        </td>
+                    </tr>
+                }
+                <tr>
+                    <td><input class="scm3-inline-input" @bind="_newName" placeholder="New product name…" /></td>
+                    <td><button type="button" class="scm3-action-btn scm3-action-primary" disabled="@(_busy || string.IsNullOrWhiteSpace(_newName))" @onclick="AddAsync">Add</button></td>
+                </tr>
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    private List<Product> _products = [];
+    private string _newName = string.Empty;
+    private bool _loading = true;
+    private bool _busy;
+    private string? _statusMessage;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _products = await ProductService.GetAllAsync();
+        _loading = false;
+    }
+
+    private async Task AddAsync()
+    {
+        await RunBusyAsync(async () =>
+        {
+            var product = new Product { Name = _newName.Trim() };
+            await ProductService.SaveAsync(product);
+            _newName = string.Empty;
+            await LoadAsync();
+            _statusMessage = $"Added \"{product.Name}\".";
+        });
+    }
+
+    private async Task SaveAsync(Product product)
+    {
+        await RunBusyAsync(async () =>
+        {
+            await ProductService.SaveAsync(product);
+            _statusMessage = $"Saved \"{product.Name}\".";
+        });
+    }
+
+    private async Task DeleteAsync(Product product)
+    {
+        await RunBusyAsync(async () =>
+        {
+            await ProductService.DeleteAsync(product.ProductId);
+            await LoadAsync();
+            _statusMessage = $"Deleted \"{product.Name}\".";
+        });
+    }
+
+    private async Task RunBusyAsync(Func<Task> action)
+    {
+        _busy = true;
+        _statusMessage = null;
+        try
+        {
+            await action();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}
