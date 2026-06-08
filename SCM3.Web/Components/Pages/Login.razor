@@ -1,7 +1,5 @@
 @page "/login"
 @layout SCM3.Web.Components.Layout.LoginLayout
-@using Microsoft.AspNetCore.Antiforgery
-@inject IAntiforgery Antiforgery
 
 <PageTitle>Sign In · SCM3 Portal</PageTitle>
 
@@ -16,10 +14,12 @@
 
     @* Plain HTML form posting to the minimal-API /login endpoint in Program.cs — sign-in
        writes an auth cookie to the HTTP response, which a Blazor Server circuit can't do
-       mid-render (root CLAUDE.md §3). The hidden field below is this page's antiforgery
-       token, issued via IAntiforgery so the [FromForm]-bound endpoint can validate it. *@
+       mid-render (root CLAUDE.md §3). <AntiforgeryToken /> renders this page's token as a
+       hidden field so the [FromForm]-bound endpoint can validate it; unlike manually calling
+       IAntiforgery.GetAndStoreTokens(HttpContext), it survives the prerender → interactive
+       circuit transition (HttpContext is only cascaded during prerendering). *@
     <form method="post" action="login" class="scm3-login-form">
-        <input type="hidden" name="@_antiforgeryTokens.FormFieldName" value="@_antiforgeryTokens.RequestToken" />
+        <AntiforgeryToken />
         <input type="hidden" name="returnUrl" value="@ReturnUrl" />
         <label>
             Username
@@ -45,19 +45,9 @@
 </div>
 
 @code {
-    [CascadingParameter]
-    private HttpContext HttpContext { get; set; } = default!;
-
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
 
     [SupplyParameterFromQuery(Name = "error")]
     private string? ErrorFlag { get; set; }
-
-    private AntiforgeryTokenSet _antiforgeryTokens = default!;
-
-    protected override void OnInitialized()
-    {
-        _antiforgeryTokens = Antiforgery.GetAndStoreTokens(HttpContext);
-    }
 }

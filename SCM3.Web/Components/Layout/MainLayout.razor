@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @inject ICurrentUserService CurrentUser
 
+<TelerikRootComponent>
 <div class="scm3-shell">
     <header class="scm3-header">
         <button class="scm3-drawer-toggle" type="button" @onclick="ToggleDrawer"
@@ -27,6 +28,8 @@
         </main>
     </div>
 </div>
+
+</TelerikRootComponent>
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.

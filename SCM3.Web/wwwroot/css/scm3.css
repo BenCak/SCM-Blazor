@@ -206,6 +206,14 @@ html, body {
     font-size: 0.9rem;
 }
 
+/* TelerikTextBox's root .k-textbox has overflow:hidden (theme default), which gives it
+   an automatic flex min-height of 0 — inside .scm3-master-list's column flex layout that
+   lets it get squeezed to ~2px once the card list pushes the column past its available
+   height. Pin it to its natural size so only the card list scrolls/shrinks. */
+.scm3-master-list > .k-textbox {
+    flex-shrink: 0;
+}
+
 .scm3-filter-group {
     display: flex;
     flex-direction: column;

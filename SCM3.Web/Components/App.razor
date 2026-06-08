@@ -13,14 +13,20 @@
        (Open Items §17.5) — variables + layout chrome below don't depend on them. *@
     <link rel="stylesheet" href="@Assets["css/scm3.variables.css"]" />
     <link rel="stylesheet" href="@Assets["css/scm3.css"]" />
+    <link rel="stylesheet" href="_content/Telerik.UI.for.Blazor/css/kendo-theme-default/all.css" />
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <HeadOutlet />
+    <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 
 <body>
-    <Routes />
+    @* Global Interactive Server render mode (root CLAUDE.md "-int Server" — no per-page/Auto
+       modes). Pages that instead set their own @rendermode become separate interactive
+       "islands" outside MainLayout's static render tree, so its <TelerikRootComponent>
+       cascading value never reaches them — surfaced as "requires a TelerikRootComponent". *@
+    <Routes @rendermode="InteractiveServer" />
     <ReconnectModal />
+    <script src="_content/Telerik.UI.for.Blazor/js/telerik-blazor.js" defer></script>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>
 

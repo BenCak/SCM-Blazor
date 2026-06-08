@@ -1,6 +1,5 @@
 @page "/admin/db/systems"
 @attribute [Authorize(Roles = "SCM_Staff,SCM_Admin")]
-@rendermode InteractiveServer
 @inject ISystemService SystemService
 @inject ICustomerService CustomerService
 @inject IProductService ProductService
@@ -32,59 +31,46 @@
     }
     else
     {
-        <table class="scm3-simple-table">
-            <thead>
-                <tr><th>Name</th><th>Customer</th><th>Product</th><th></th></tr>
-            </thead>
-            <tbody>
-                @foreach (var system in _systems)
-                {
-                    <tr>
-                        <td><input class="scm3-inline-input" @bind="system.Name" /></td>
-                        <td>
-                            <select class="scm3-inline-input" @bind="system.CustomerId">
-                                @foreach (var customer in _customers)
-                                {
-                                    <option value="@customer.CustomerId">@customer.Name</option>
-                                }
-                            </select>
-                        </td>
-                        <td>
-                            <select class="scm3-inline-input" @bind="system.ProductId">
-                                @foreach (var product in _products)
-                                {
-                                    <option value="@product.ProductId">@product.Name</option>
-                                }
-                            </select>
-                        </td>
-                        <td>
-                            <button type="button" class="scm3-action-btn scm3-action-primary" disabled="@_busy" @onclick="() => SaveAsync(system)">Save</button>
-                            <button type="button" class="scm3-action-btn scm3-action-danger" disabled="@_busy" @onclick="() => DeleteAsync(system)">Delete</button>
-                        </td>
-                    </tr>
-                }
-                <tr>
-                    <td><input class="scm3-inline-input" @bind="_newName" placeholder="New system name…" /></td>
-                    <td>
-                        <select class="scm3-inline-input" @bind="_newCustomerId">
-                            @foreach (var customer in _customers)
-                            {
-                                <option value="@customer.CustomerId">@customer.Name</option>
-                            }
-                        </select>
-                    </td>
-                    <td>
-                        <select class="scm3-inline-input" @bind="_newProductId">
-                            @foreach (var product in _products)
-                            {
-                                <option value="@product.ProductId">@product.Name</option>
-                            }
-                        </select>
-                    </td>
-                    <td><button type="button" class="scm3-action-btn scm3-action-primary" disabled="@(_busy || string.IsNullOrWhiteSpace(_newName))" @onclick="AddAsync">Add</button></td>
-                </tr>
-            </tbody>
-        </table>
+        <TelerikGrid Data="@_systems"
+                     EditMode="Telerik.Blazor.GridEditMode.Inline"
+                     OnCreate="@OnCreate"
+                     OnUpdate="@OnUpdate"
+                     OnDelete="@OnDelete">
+            <GridToolBarTemplate>
+                <GridCommandButton Command="Add">Add System</GridCommandButton>
+            </GridToolBarTemplate>
+            <GridColumns>
+                <GridColumn Field="@nameof(SystemEntity.Name)" Title="Name" />
+                <GridColumn Field="@nameof(SystemEntity.CustomerId)" Title="Customer">
+                    <Template>@GetCustomerName(((SystemEntity)context).CustomerId)</Template>
+                    <EditorTemplate>
+                        @{ var editedSystem = (SystemEntity)context; }
+                        <TelerikDropDownList Data="@_customers"
+                                             TextField="@nameof(Customer.Name)"
+                                             ValueField="@nameof(Customer.CustomerId)"
+                                             @bind-Value="editedSystem.CustomerId"
+                                             Width="100%" />
+                    </EditorTemplate>
+                </GridColumn>
+                <GridColumn Field="@nameof(SystemEntity.ProductId)" Title="Product">
+                    <Template>@GetProductName(((SystemEntity)context).ProductId)</Template>
+                    <EditorTemplate>
+                        @{ var editedSystem = (SystemEntity)context; }
+                        <TelerikDropDownList Data="@_products"
+                                             TextField="@nameof(Product.Name)"
+                                             ValueField="@nameof(Product.ProductId)"
+                                             @bind-Value="editedSystem.ProductId"
+                                             Width="100%" />
+                    </EditorTemplate>
+                </GridColumn>
+                <GridCommandColumn>
+                    <GridCommandButton Command="Edit">Edit</GridCommandButton>
+                    <GridCommandButton Command="Delete">Delete</GridCommandButton>
+                    <GridCommandButton Command="Save" ShowInEdit="true">Save</GridCommandButton>
+                    <GridCommandButton Command="Cancel" ShowInEdit="true">Cancel</GridCommandButton>
+                </GridCommandColumn>
+            </GridColumns>
+        </TelerikGrid>
     }
 </div>
 
@@ -93,12 +79,7 @@
     private List<Customer> _customers = [];
     private List<Product> _products = [];
 
-    private string _newName = string.Empty;
-    private int _newCustomerId;
-    private int _newProductId;
-
     private bool _loading = true;
-    private bool _busy;
     private string? _statusMessage;
 
     protected override async Task OnInitializedAsync()
@@ -106,8 +87,6 @@
         _loading = true;
         _customers = await CustomerService.GetAllAsync();
         _products = await ProductService.GetAllAsync();
-        _newCustomerId = _customers.FirstOrDefault()?.CustomerId ?? 0;
-        _newProductId = _products.FirstOrDefault()?.ProductId ?? 0;
         await LoadAsync();
     }
 
@@ -118,48 +97,45 @@
         _loading = false;
     }
 
-    private async Task AddAsync()
+    private async Task OnCreate(GridCommandEventArgs args)
     {
-        await RunBusyAsync(async () =>
-        {
-            var system = new SystemEntity { Name = _newName.Trim(), CustomerId = _newCustomerId, ProductId = _newProductId };
-            await SystemService.SaveAsync(system);
-            _newName = string.Empty;
-            await LoadAsync();
-            _statusMessage = $"Added \"{system.Name}\".";
-        });
-    }
+        var system = (SystemEntity)args.Item;
+        if (string.IsNullOrWhiteSpace(system.Name)) return;
 
-    private async Task SaveAsync(SystemEntity system)
-    {
-        await RunBusyAsync(async () =>
+        if (system.CustomerId == 0)
         {
-            await SystemService.SaveAsync(system);
-            _statusMessage = $"Saved \"{system.Name}\".";
-        });
-    }
-
-    private async Task DeleteAsync(SystemEntity system)
-    {
-        await RunBusyAsync(async () =>
-        {
-            await SystemService.DeleteAsync(system.SystemId);
-            await LoadAsync();
-            _statusMessage = $"Deleted \"{system.Name}\".";
-        });
-    }
-
-    private async Task RunBusyAsync(Func<Task> action)
-    {
-        _busy = true;
-        _statusMessage = null;
-        try
-        {
-            await action();
+            system.CustomerId = _customers.First().CustomerId;
         }
-        finally
+
+        if (system.ProductId == 0)
         {
-            _busy = false;
+            system.ProductId = _products.First().ProductId;
         }
+
+        await SystemService.SaveAsync(system);
+        await LoadAsync();
+        _statusMessage = $"Added \"{system.Name}\".";
     }
+
+    private async Task OnUpdate(GridCommandEventArgs args)
+    {
+        var system = (SystemEntity)args.Item;
+        await SystemService.SaveAsync(system);
+        await LoadAsync();
+        _statusMessage = $"Saved \"{system.Name}\".";
+    }
+
+    private async Task OnDelete(GridCommandEventArgs args)
+    {
+        var system = (SystemEntity)args.Item;
+        await SystemService.DeleteAsync(system.SystemId);
+        await LoadAsync();
+        _statusMessage = $"Deleted \"{system.Name}\".";
+    }
+
+    private string GetCustomerName(int customerId)
+        => _customers.FirstOrDefault(c => c.CustomerId == customerId)?.Name ?? "-";
+
+    private string GetProductName(int productId)
+        => _products.FirstOrDefault(p => p.ProductId == productId)?.Name ?? "-";
 }

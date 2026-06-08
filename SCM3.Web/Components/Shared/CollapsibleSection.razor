@@ -1,0 +1,44 @@
+@* Single labeled collapsible group used for sub-groupings within the detail-panel's
+   tab content (e.g. "Requestor Information", "DCNs" — root CLAUDE.md §5/§7). Telerik
+   UI for Blazor 14.0.0 has no Accordion component, and TelerikPanelBar only supports
+   per-item content via the data-bound Data/PanelBarBindings/ContentTemplate API — it
+   does not recognize declarative <PanelBarItem><ChildContent> markup (that throws
+   "does not have a property matching the name 'ChildContent'" at runtime). This wraps
+   a single-item data-bound TelerikPanelBar so callers get the simple
+   <CollapsibleSection Title="..." Expanded="true">...</CollapsibleSection> shape they need
+   while staying on the real Telerik API (SCM3.Web/CLAUDE.md Telerik rule). *@
+<TelerikPanelBar Data="@_items" @bind-ExpandedItems="@_expandedItems">
+    <PanelBarBindings>
+        <PanelBarBinding TextField="@nameof(Section.Title)">
+            <HeaderTemplate>@((context as Section)?.Title)</HeaderTemplate>
+            <ContentTemplate>@((context as Section)?.Content)</ContentTemplate>
+        </PanelBarBinding>
+    </PanelBarBindings>
+</TelerikPanelBar>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool Expanded { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private sealed class Section
+    {
+        public string Title = string.Empty;
+        public RenderFragment? Content;
+    }
+
+    private List<Section> _items = [];
+    private IEnumerable<object> _expandedItems = [];
+
+    protected override void OnInitialized()
+    {
+        var section = new Section { Title = Title, Content = ChildContent };
+        _items = [section];
+        _expandedItems = Expanded ? new List<object> { section } : [];
+    }
+}

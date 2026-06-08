@@ -1,6 +1,5 @@
 @page "/admin/users"
 @attribute [Authorize(Roles = "SCM_Admin")]
-@rendermode InteractiveServer
 @inject IUserService UserService
 
 @*
@@ -25,33 +24,29 @@
     }
     else
     {
-        <table class="scm3-simple-table">
-            <thead>
-                <tr><th>Username</th><th>Full Name</th><th>Email</th><th>Department</th><th>Role</th><th></th></tr>
-            </thead>
-            <tbody>
-                @foreach (var user in _users)
-                {
-                    <tr>
-                        <td>@user.Username</td>
-                        <td><input class="scm3-inline-input" @bind="user.FullName" /></td>
-                        <td><input class="scm3-inline-input" @bind="user.Email" /></td>
-                        <td><input class="scm3-inline-input" @bind="user.Department" /></td>
-                        <td>
-                            <select class="scm3-inline-input" @bind="user.Role">
-                                @foreach (var role in Roles)
-                                {
-                                    <option value="@role">@role</option>
-                                }
-                            </select>
-                        </td>
-                        <td>
-                            <button type="button" class="scm3-action-btn scm3-action-primary" disabled="@_busy" @onclick="() => SaveAsync(user)">Save</button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+        <TelerikGrid Data="@_users"
+                     EditMode="Telerik.Blazor.GridEditMode.Inline"
+                     OnUpdate="@OnUpdate">
+            <GridColumns>
+                <GridColumn Field="@nameof(User.Username)" Title="Username" Editable="false" />
+                <GridColumn Field="@nameof(User.FullName)" Title="Full Name" />
+                <GridColumn Field="@nameof(User.Email)" Title="Email" />
+                <GridColumn Field="@nameof(User.Department)" Title="Department" />
+                <GridColumn Field="@nameof(User.Role)" Title="Role">
+                    <EditorTemplate>
+                        @{ var editedUser = (User)context; }
+                        <TelerikDropDownList Data="@Roles"
+                                             @bind-Value="editedUser.Role"
+                                             Width="100%" />
+                    </EditorTemplate>
+                </GridColumn>
+                <GridCommandColumn>
+                    <GridCommandButton Command="Edit">Edit</GridCommandButton>
+                    <GridCommandButton Command="Save" ShowInEdit="true">Save</GridCommandButton>
+                    <GridCommandButton Command="Cancel" ShowInEdit="true">Cancel</GridCommandButton>
+                </GridCommandColumn>
+            </GridColumns>
+        </TelerikGrid>
     }
 </div>
 
@@ -60,7 +55,6 @@
 
     private List<User> _users = [];
     private bool _loading = true;
-    private bool _busy;
     private string? _statusMessage;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
@@ -72,18 +66,13 @@
         _loading = false;
     }
 
-    private async Task SaveAsync(User user)
+    private async Task OnUpdate(GridCommandEventArgs args)
     {
-        _busy = true;
+        var user = (User)args.Item;
         _statusMessage = null;
-        try
-        {
-            await UserService.SaveAsync(user);
-            _statusMessage = $"Saved \"{user.FullName}\" — role: {user.Role}.";
-        }
-        finally
-        {
-            _busy = false;
-        }
+
+        await UserService.SaveAsync(user);
+        await LoadAsync();
+        _statusMessage = $"Saved \"{user.FullName}\" - role: {user.Role}.";
     }
 }

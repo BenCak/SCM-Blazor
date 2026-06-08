@@ -1,14 +1,11 @@
 @page "/admin/db/customers"
 @attribute [Authorize(Roles = "SCM_Staff,SCM_Admin")]
-@rendermode InteractiveServer
 @inject ICustomerService CustomerService
 
 @*
     SCM DB Manager > Customers (root CLAUDE.md §8) — reference data feeding System
-    composition (§2 hierarchy: Customer + Product -> System). Simple inline list/add/
-    delete since Customer is just a soft-deletable name (root CLAUDE.md §16 recipe step 9
-    calls for "list + inline edit"; Telerik's Grid isn't available — see §1 trial note —
-    so this follows the same plain-table pattern as the rest of the admin area).
+    composition (§2 hierarchy: Customer + Product -> System). Inline list/add/delete
+    using TelerikGrid (SCM3.Web/CLAUDE.md Telerik rule).
 *@
 <PageTitle>Customers · SCM3 Portal</PageTitle>
 
@@ -27,33 +24,29 @@
     }
     else
     {
-        <table class="scm3-simple-table">
-            <thead>
-                <tr><th>Name</th><th></th></tr>
-            </thead>
-            <tbody>
-                @foreach (var customer in _customers)
-                {
-                    <tr>
-                        <td><input class="scm3-inline-input" @bind="customer.Name" /></td>
-                        <td>
-                            <button type="button" class="scm3-action-btn scm3-action-primary" disabled="@_busy" @onclick="() => SaveAsync(customer)">Save</button>
-                            <button type="button" class="scm3-action-btn scm3-action-danger" disabled="@_busy" @onclick="() => DeleteAsync(customer)">Delete</button>
-                        </td>
-                    </tr>
-                }
-                <tr>
-                    <td><input class="scm3-inline-input" @bind="_newName" placeholder="New customer name…" /></td>
-                    <td><button type="button" class="scm3-action-btn scm3-action-primary" disabled="@(_busy || string.IsNullOrWhiteSpace(_newName))" @onclick="AddAsync">Add</button></td>
-                </tr>
-            </tbody>
-        </table>
+        <TelerikGrid Data="@_customers"
+                     EditMode="Telerik.Blazor.GridEditMode.Inline"
+                     OnUpdate="@OnUpdate"
+                     OnCreate="@OnCreate"
+                     OnDelete="@OnDelete">
+            <GridToolBarTemplate>
+                <GridCommandButton Command="Add">Add Customer</GridCommandButton>
+            </GridToolBarTemplate>
+            <GridColumns>
+                <GridColumn Field="@nameof(Customer.Name)" Title="Name" />
+                <GridCommandColumn>
+                    <GridCommandButton Command="Edit">Edit</GridCommandButton>
+                    <GridCommandButton Command="Delete">Delete</GridCommandButton>
+                    <GridCommandButton Command="Save" ShowInEdit="true">Save</GridCommandButton>
+                    <GridCommandButton Command="Cancel" ShowInEdit="true">Cancel</GridCommandButton>
+                </GridCommandColumn>
+            </GridColumns>
+        </TelerikGrid>
     }
 </div>
 
 @code {
     private List<Customer> _customers = [];
-    private string _newName = string.Empty;
     private bool _loading = true;
     private bool _busy;
     private string? _statusMessage;
@@ -67,35 +60,29 @@
         _loading = false;
     }
 
-    private async Task AddAsync()
+    private async Task OnCreate(GridCommandEventArgs args)
     {
-        await RunBusyAsync(async () =>
-        {
-            var customer = new Customer { Name = _newName.Trim() };
-            await CustomerService.SaveAsync(customer);
-            _newName = string.Empty;
-            await LoadAsync();
-            _statusMessage = $"Added \"{customer.Name}\".";
-        });
+        var customer = (Customer)args.Item;
+        if (string.IsNullOrWhiteSpace(customer.Name)) return;
+        await CustomerService.SaveAsync(customer);
+        await LoadAsync();
+        _statusMessage = $"Added \"{customer.Name}\".";
     }
 
-    private async Task SaveAsync(Customer customer)
+    private async Task OnUpdate(GridCommandEventArgs args)
     {
-        await RunBusyAsync(async () =>
-        {
-            await CustomerService.SaveAsync(customer);
-            _statusMessage = $"Saved \"{customer.Name}\".";
-        });
+        var customer = (Customer)args.Item;
+        await CustomerService.SaveAsync(customer);
+        await LoadAsync();
+        _statusMessage = $"Saved \"{customer.Name}\".";
     }
 
-    private async Task DeleteAsync(Customer customer)
+    private async Task OnDelete(GridCommandEventArgs args)
     {
-        await RunBusyAsync(async () =>
-        {
-            await CustomerService.DeleteAsync(customer.CustomerId);
-            await LoadAsync();
-            _statusMessage = $"Deleted \"{customer.Name}\".";
-        });
+        var customer = (Customer)args.Item;
+        await CustomerService.DeleteAsync(customer.CustomerId);
+        await LoadAsync();
+        _statusMessage = $"Deleted \"{customer.Name}\".";
     }
 
     private async Task RunBusyAsync(Func<Task> action)

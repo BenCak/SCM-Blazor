@@ -14,4 +14,16 @@ internal static class RequestDisplay
         "Terminated" => "scm3-status-terminated",
         _ => "scm3-status-default"
     };
+
+    // Telerik ThemeColor string for TelerikChip status badge — maps each workflow
+    // status to a Telerik semantic color so chips carry meaning without custom CSS.
+    public static string StatusThemeColor(string? statusName) => statusName switch
+    {
+        "Pending"   => "warning",
+        "In Review" => "info",
+        "Released"  => "success",
+        "Rejected"  => "error",
+        "Terminated" => "error",
+        _           => "base"
+    };
 }

@@ -1,6 +1,5 @@
 @page "/admin/db/products"
 @attribute [Authorize(Roles = "SCM_Staff,SCM_Admin")]
-@rendermode InteractiveServer
 @inject IProductService ProductService
 
 @*
@@ -24,33 +23,29 @@
     }
     else
     {
-        <table class="scm3-simple-table">
-            <thead>
-                <tr><th>Name</th><th></th></tr>
-            </thead>
-            <tbody>
-                @foreach (var product in _products)
-                {
-                    <tr>
-                        <td><input class="scm3-inline-input" @bind="product.Name" /></td>
-                        <td>
-                            <button type="button" class="scm3-action-btn scm3-action-primary" disabled="@_busy" @onclick="() => SaveAsync(product)">Save</button>
-                            <button type="button" class="scm3-action-btn scm3-action-danger" disabled="@_busy" @onclick="() => DeleteAsync(product)">Delete</button>
-                        </td>
-                    </tr>
-                }
-                <tr>
-                    <td><input class="scm3-inline-input" @bind="_newName" placeholder="New product name…" /></td>
-                    <td><button type="button" class="scm3-action-btn scm3-action-primary" disabled="@(_busy || string.IsNullOrWhiteSpace(_newName))" @onclick="AddAsync">Add</button></td>
-                </tr>
-            </tbody>
-        </table>
+        <TelerikGrid Data="@_products"
+                     EditMode="Telerik.Blazor.GridEditMode.Inline"
+                     OnUpdate="@OnUpdate"
+                     OnCreate="@OnCreate"
+                     OnDelete="@OnDelete">
+            <GridToolBarTemplate>
+                <GridCommandButton Command="Add">Add Product</GridCommandButton>
+            </GridToolBarTemplate>
+            <GridColumns>
+                <GridColumn Field="@nameof(Product.Name)" Title="Name" />
+                <GridCommandColumn>
+                    <GridCommandButton Command="Edit">Edit</GridCommandButton>
+                    <GridCommandButton Command="Delete">Delete</GridCommandButton>
+                    <GridCommandButton Command="Save" ShowInEdit="true">Save</GridCommandButton>
+                    <GridCommandButton Command="Cancel" ShowInEdit="true">Cancel</GridCommandButton>
+                </GridCommandColumn>
+            </GridColumns>
+        </TelerikGrid>
     }
 </div>
 
 @code {
     private List<Product> _products = [];
-    private string _newName = string.Empty;
     private bool _loading = true;
     private bool _busy;
     private string? _statusMessage;
@@ -64,35 +59,29 @@
         _loading = false;
     }
 
-    private async Task AddAsync()
+    private async Task OnCreate(GridCommandEventArgs args)
     {
-        await RunBusyAsync(async () =>
-        {
-            var product = new Product { Name = _newName.Trim() };
-            await ProductService.SaveAsync(product);
-            _newName = string.Empty;
-            await LoadAsync();
-            _statusMessage = $"Added \"{product.Name}\".";
-        });
+        var product = (Product)args.Item;
+        if (string.IsNullOrWhiteSpace(product.Name)) return;
+        await ProductService.SaveAsync(product);
+        await LoadAsync();
+        _statusMessage = $"Added \"{product.Name}\".";
     }
 
-    private async Task SaveAsync(Product product)
+    private async Task OnUpdate(GridCommandEventArgs args)
     {
-        await RunBusyAsync(async () =>
-        {
-            await ProductService.SaveAsync(product);
-            _statusMessage = $"Saved \"{product.Name}\".";
-        });
+        var product = (Product)args.Item;
+        await ProductService.SaveAsync(product);
+        await LoadAsync();
+        _statusMessage = $"Saved \"{product.Name}\".";
     }
 
-    private async Task DeleteAsync(Product product)
+    private async Task OnDelete(GridCommandEventArgs args)
     {
-        await RunBusyAsync(async () =>
-        {
-            await ProductService.DeleteAsync(product.ProductId);
-            await LoadAsync();
-            _statusMessage = $"Deleted \"{product.Name}\".";
-        });
+        var product = (Product)args.Item;
+        await ProductService.DeleteAsync(product.ProductId);
+        await LoadAsync();
+        _statusMessage = $"Deleted \"{product.Name}\".";
     }
 
     private async Task RunBusyAsync(Func<Task> action)

@@ -7,7 +7,8 @@
 <button type="button" class="scm3-request-card @(Selected ? "scm3-request-card-selected" : "")" @onclick="() => OnSelect.InvokeAsync(Request.RequestId)">
     <div class="scm3-request-card-row1">
         <span class="scm3-request-card-title">@Request.Title @Request.Version</span>
-        <span class="scm3-status-badge @RequestDisplay.StatusCssClass(Request.RequestStatus?.Name)">@(Request.RequestStatus?.Name ?? "—")</span>
+        <TelerikChip Text="@(Request.RequestStatus?.Name ?? "—")"
+                     ThemeColor="@RequestDisplay.StatusThemeColor(Request.RequestStatus?.Name)" />
     </div>
     <div class="scm3-request-card-row2">
         @Request.RequestType?.Name · ID @Request.RequestId · Parent @(Request.ParentRequest?.Title ?? "—") · Requestor @(Request.Requestor?.FullName ?? "—")

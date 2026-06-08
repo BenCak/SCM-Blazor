@@ -1,57 +1,141 @@
 @inject ICurrentUserService CurrentUser
+@inject NavigationManager Navigation
 
+@* Role-driven sidebar nav, rendered as a single data-bound, vertically-oriented
+   TelerikMenu (root CLAUDE.md §8 drawer). TelerikMenu is a flyout/popup-style menu —
+   group headers (Release Artifacts, Viewer Tools, SCM DB Manager, Admin) open their
+   children in a popup on click rather than showing them inline at all times; this
+   trade-off vs. an always-expanded tree was confirmed with the user before converting
+   from the old <SCM3NavLink>-based always-visible nested links. _items is rebuilt from
+   ICurrentUserService.IsInRole(...) checks — same role gating as before (no grayed-out
+   items), just centralized in code instead of scattered @if blocks in markup. *@
 <div class="scm3-nav">
-    <div class="scm3-nav-group">
-        <div class="scm3-nav-group-label">@(Expanded ? "Release Artifacts" : "📋")</div>
-        <SCM3NavLink Href="/requests" Icon="📋" Label="All Requests" Expanded="Expanded" />
-    </div>
-
-    <div class="scm3-nav-group">
-        <div class="scm3-nav-group-label">@(Expanded ? "Viewer Tools" : "🔧")</div>
-        <SCM3NavLink Href="/tools/lineage-tree" Icon="🌳" Label="Lineage Tree" Expanded="Expanded" />
-        <SCM3NavLink Href="/tools/release-documents" Icon="📄" Label="Release Documents" Expanded="Expanded" />
-        @if (CurrentUser.IsInRole("SCM_Staff", "SCM_Admin"))
-        {
-            <SCM3NavLink Href="/tools/release-tools" Icon="🚀" Label="Release Tools" Expanded="Expanded" />
-            <SCM3NavLink Href="/tools/compare-tools" Icon="🔍" Label="Compare Tools" Expanded="Expanded" />
-        }
-    </div>
-
-    @if (CurrentUser.IsInRole("SCM_Staff", "SCM_Admin"))
-    {
-        <div class="scm3-nav-group">
-            <div class="scm3-nav-group-label">@(Expanded ? "SCM DB Manager" : "🗄️")</div>
-            <SCM3NavLink Href="/admin/db/customers" Icon="🏢" Label="Customers" Expanded="Expanded" />
-            <SCM3NavLink Href="/admin/db/products" Icon="📦" Label="Products" Expanded="Expanded" />
-            <SCM3NavLink Href="/admin/db/systems" Icon="🖧" Label="Systems" Expanded="Expanded" />
-            <SCM3NavLink Href="/admin/db/csci-names" Icon="🧩" Label="CSCI Names" Expanded="Expanded" />
-            <SCM3NavLink Href="/admin/db/segment-names" Icon="🔗" Label="Segment Names" Expanded="Expanded" />
-            <SCM3NavLink Href="/admin/db/manufacturers" Icon="🏭" Label="Manufacturers" Expanded="Expanded" />
-            <SCM3NavLink Href="/admin/db/units" Icon="📐" Label="Units" Expanded="Expanded" />
-        </div>
-    }
-
-    @if (CurrentUser.IsInRole("SCM_Admin"))
-    {
-        <div class="scm3-nav-group">
-            <div class="scm3-nav-group-label">@(Expanded ? "Admin" : "⚙️")</div>
-            <SCM3NavLink Href="/admin/users" Icon="👤" Label="Manage Users" Expanded="Expanded" />
-            <SCM3NavLink Href="/admin/roles" Icon="🔐" Label="Roles & Permissions" Expanded="Expanded" />
-            <SCM3NavLink Href="/admin/settings" Icon="⚙️" Label="Settings" Expanded="Expanded" />
-        </div>
-    }
+    <TelerikMenu TItem="NavMenuItem"
+                 Data="@_items"
+                 Orientation="@Telerik.Blazor.MenuOrientation.Vertical"
+                 ItemsField="@nameof(NavMenuItem.Items)"
+                 TextField="@nameof(NavMenuItem.Text)"
+                 OnClick="@OnItemClick"
+                 OnItemRender="@OnItemRender">
+        <ItemTemplate Context="item">
+            @{ var navItem = (NavMenuItem)item; }
+            <span class="scm3-nav-icon" aria-hidden="true">@navItem.Icon</span>
+            @if (Expanded)
+            {
+                <span class="scm3-nav-label">@navItem.Text</span>
+            }
+        </ItemTemplate>
+    </TelerikMenu>
 </div>
 
 @code {
     // Drives icon-only (collapsed, 50px) vs icon+label (expanded, 200px) display —
-    // root CLAUDE.md §8. Items only render at all if the current user's role grants
-    // access (no grayed-out items, per the doc).
+    // root CLAUDE.md §8.
     [Parameter]
     public bool Expanded { get; set; } = true;
+
+    private sealed class NavMenuItem
+    {
+        public string Text { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
+        public string? Url { get; set; }
+        public List<NavMenuItem>? Items { get; set; }
+    }
+
+    private List<NavMenuItem> _items = [];
 
     // MainLayout also calls LoadAsync, but its completion doesn't trigger a re-render
     // here (NavMenu's parameters haven't changed) — load independently so role checks
     // below see a populated CurrentUser on NavMenu's own first render. LoadAsync is
     // idempotent (no-ops once CurrentUser is set), so this is cheap either way.
-    protected override async Task OnInitializedAsync() => await CurrentUser.LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        await CurrentUser.LoadAsync();
+        _items = BuildItems();
+    }
+
+    private List<NavMenuItem> BuildItems()
+    {
+        var isScm = CurrentUser.IsInRole("SCM_Staff", "SCM_Admin");
+
+        var releaseArtifacts = new NavMenuItem
+        {
+            Text = "Release Artifacts",
+            Icon = "📋",
+            Items =
+            [
+                new NavMenuItem { Text = "All Requests", Icon = "📋", Url = "/requests" }
+            ]
+        };
+
+        var viewerTools = new NavMenuItem
+        {
+            Text = "Viewer Tools",
+            Icon = "🔧",
+            Items =
+            [
+                new NavMenuItem { Text = "Lineage Tree", Icon = "🌳", Url = "/tools/lineage-tree" },
+                new NavMenuItem { Text = "Release Documents", Icon = "📄", Url = "/tools/release-documents" }
+            ]
+        };
+        if (isScm)
+        {
+            viewerTools.Items!.Add(new NavMenuItem { Text = "Release Tools", Icon = "🚀", Url = "/tools/release-tools" });
+            viewerTools.Items!.Add(new NavMenuItem { Text = "Compare Tools", Icon = "🔍", Url = "/tools/compare-tools" });
+        }
+
+        var items = new List<NavMenuItem> { releaseArtifacts, viewerTools };
+
+        if (isScm)
+        {
+            items.Add(new NavMenuItem
+            {
+                Text = "SCM DB Manager",
+                Icon = "🗄️",
+                Items =
+                [
+                    new NavMenuItem { Text = "Customers", Icon = "🏢", Url = "/admin/db/customers" },
+                    new NavMenuItem { Text = "Products", Icon = "📦", Url = "/admin/db/products" },
+                    new NavMenuItem { Text = "Systems", Icon = "🖧", Url = "/admin/db/systems" },
+                    new NavMenuItem { Text = "CSCI Names", Icon = "🧩", Url = "/admin/db/csci-names" },
+                    new NavMenuItem { Text = "Segment Names", Icon = "🔗", Url = "/admin/db/segment-names" },
+                    new NavMenuItem { Text = "Manufacturers", Icon = "🏭", Url = "/admin/db/manufacturers" },
+                    new NavMenuItem { Text = "Units", Icon = "📐", Url = "/admin/db/units" }
+                ]
+            });
+        }
+
+        if (CurrentUser.IsInRole("SCM_Admin"))
+        {
+            items.Add(new NavMenuItem
+            {
+                Text = "Admin",
+                Icon = "⚙️",
+                Items =
+                [
+                    new NavMenuItem { Text = "Manage Users", Icon = "👤", Url = "/admin/users" },
+                    new NavMenuItem { Text = "Roles & Permissions", Icon = "🔐", Url = "/admin/roles" },
+                    new NavMenuItem { Text = "Settings", Icon = "⚙️", Url = "/admin/settings" }
+                ]
+            });
+        }
+
+        return items;
+    }
+
+    private void OnItemClick(NavMenuItem item)
+    {
+        if (item.Url is not null)
+        {
+            Navigation.NavigateTo(item.Url);
+        }
+    }
+
+    private void OnItemRender(MenuItemRenderEventArgs args)
+    {
+        var isActive = args.Item is NavMenuItem { Url: not null } navItem
+            && Navigation.ToBaseRelativePath(Navigation.Uri).Equals(navItem.Url!.TrimStart('/'), StringComparison.OrdinalIgnoreCase);
+
+        args.Class = isActive ? "scm3-nav-link active" : "scm3-nav-link";
+    }
 }

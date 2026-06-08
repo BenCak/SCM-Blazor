@@ -17,31 +17,26 @@
         under <a href="/admin/users">Manage Users</a>.
     </p>
 
-    <table class="scm3-simple-table">
-        <thead>
-            <tr>
-                <th>Action</th>
-                <th>Viewer</th>
-                <th>TE_User</th>
-                <th>EE_User</th>
-                <th>SCM_Staff</th>
-                <th>SCM_Admin</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var row in Matrix)
-            {
-                <tr>
-                    <td>@row.Action</td>
-                    <td>@row.Viewer</td>
-                    <td>@row.TeUser</td>
-                    <td>@row.EeUser</td>
-                    <td>@row.ScmStaff</td>
-                    <td>@row.ScmAdmin</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <TelerikGrid Data="@Matrix">
+        <GridColumns>
+            <GridColumn Field="@nameof(PermissionRow.Action)" Title="Action" />
+            <GridColumn Field="@nameof(PermissionRow.Viewer)" Title="Viewer">
+                <Template>@RenderBadge(((PermissionRow)context).Viewer)</Template>
+            </GridColumn>
+            <GridColumn Field="@nameof(PermissionRow.TeUser)" Title="TE_User">
+                <Template>@RenderBadge(((PermissionRow)context).TeUser)</Template>
+            </GridColumn>
+            <GridColumn Field="@nameof(PermissionRow.EeUser)" Title="EE_User">
+                <Template>@RenderBadge(((PermissionRow)context).EeUser)</Template>
+            </GridColumn>
+            <GridColumn Field="@nameof(PermissionRow.ScmStaff)" Title="SCM_Staff">
+                <Template>@RenderBadge(((PermissionRow)context).ScmStaff)</Template>
+            </GridColumn>
+            <GridColumn Field="@nameof(PermissionRow.ScmAdmin)" Title="SCM_Admin">
+                <Template>@RenderBadge(((PermissionRow)context).ScmAdmin)</Template>
+            </GridColumn>
+        </GridColumns>
+    </TelerikGrid>
 </div>
 
 @code {
@@ -64,4 +59,6 @@
         new("Admin menu", "❌", "❌", "❌", "❌", "✅"),
         new("Manage Users", "❌", "❌", "❌", "❌", "✅"),
     ];
+
+    private RenderFragment RenderBadge(string value) => @<TelerikChip Text="@value" />;
 }

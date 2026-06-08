@@ -71,3 +71,7 @@ app.MapNotificationEndpoints();
 app.MapUserEndpoints();
 
 app.Run();
+
+// Exposes the generated Program for SCM3.Tests.Integration's WebApplicationFactory<Program>
+// (top-level statements generate an internal Program — WebApplicationFactory needs a public one).
+public partial class Program;

@@ -1,6 +1,4 @@
 @page "/requests"
-@rendermode InteractiveServer
-@using System.Net
 @using System.Text
 @inject IRequestService RequestService
 @inject ICurrentUserService CurrentUser
@@ -21,50 +19,59 @@
             <a class="scm3-export-btn" href="@ExportHref" download="@ExportFileName" title="Export the visible list to Excel">⬇ Export Excel</a>
         </div>
 
-        <input class="scm3-search-input" value="@_searchText" @oninput="OnSearchInput"
-               placeholder="Search by name, ID, requestor, version, or parent…" />
+        <TelerikTextBox Value="@_searchText"
+                       ValueChanged="@OnSearchChanged"
+                       Placeholder="Search by name, ID, requestor, version, or parent…"
+                       Width="100%" />
 
         <div class="scm3-filter-group">
             <span class="scm3-filter-group-label">Type</span>
-            <div class="scm3-filter-chips">
-                @foreach (var typeName in TypeChips)
-                {
-                    <button type="button" class="scm3-chip @(_selectedTypes.Contains(typeName) ? "scm3-chip-active" : "")"
-                            @onclick="() => ToggleTypeFilter(typeName)">@typeName</button>
-                }
-            </div>
+            <TelerikChipList TItem="string"
+                             Rounded="Telerik.Blazor.ChipRounded.Full"
+                             Data="@TypeChips"
+                             SelectionMode="@Telerik.Blazor.ChipListSelectionMode.Multiple"
+                             SelectedItems="@_selectedTypes"
+                             SelectedItemsChanged="@OnSelectedTypesChanged">
+                <ItemTemplate>@context</ItemTemplate>
+            </TelerikChipList>
         </div>
 
         <div class="scm3-filter-group">
             <span class="scm3-filter-group-label">Status</span>
-            <div class="scm3-filter-chips">
-                @foreach (var statusName in StatusChips)
-                {
-                    <button type="button" class="scm3-chip @(_selectedStatuses.Contains(statusName) ? "scm3-chip-active" : "")"
-                            @onclick="() => ToggleStatusFilter(statusName)">@statusName</button>
-                }
-            </div>
+            <TelerikChipList TItem="string"
+                             Rounded="Telerik.Blazor.ChipRounded.Full"
+                             Data="@StatusChips"
+                             SelectionMode="@Telerik.Blazor.ChipListSelectionMode.Multiple"
+                             SelectedItems="@_selectedStatuses"
+                             SelectedItemsChanged="@OnSelectedStatusesChanged">
+                <ItemTemplate>@context</ItemTemplate>
+            </TelerikChipList>
         </div>
+
+        <TelerikButton OnClick="@ClearFilters" FillMode="@Telerik.Blazor.ThemeConstants.Button.FillMode.Flat">Clear</TelerikButton>
 
         @if (_loading)
         {
             <p class="scm3-muted">Loading requests…</p>
         }
-        else if (_visibleRequests.Count == 0)
-        {
-            <p class="scm3-muted">No requests match the current filters.</p>
-        }
         else
         {
-            <div class="scm3-card-list">
-                @foreach (var request in _visibleRequests)
-                {
-                    <RequestCard Request="request"
-                                 Selected="@(_selected?.RequestId == request.RequestId)"
-                                 NoteCount="@_noteCounts.GetValueOrDefault(request.RequestId)"
-                                 OnSelect="SelectAsync" />
-                }
-            </div>
+            @if (_visibleRequests.Count == 0)
+            {
+                <p class="scm3-muted">No requests match the current filters.</p>
+            }
+            else
+            {
+                <div class="scm3-card-list">
+                    @foreach (var request in _visibleRequests)
+                    {
+                        <RequestCard Request="@request"
+                                     Selected="@(_selected?.RequestId == request.RequestId)"
+                                     NoteCount="@_noteCounts.GetValueOrDefault(request.RequestId)"
+                                     OnSelect="@SelectAsync" />
+                    }
+                </div>
+            }
         }
     </section>
 
@@ -98,9 +105,29 @@
     private Request? _selected;
 
     private string _searchText = string.Empty;
-    private readonly HashSet<string> _selectedTypes = [];
-    private readonly HashSet<string> _selectedStatuses = [];
+    private List<string> _selectedTypes = [];
+    private List<string> _selectedStatuses = [];
     private bool _loading = true;
+
+    private void OnSelectedTypesChanged(IEnumerable<string> selected)
+    {
+        _selectedTypes = selected.ToList();
+        ApplyFilters();
+    }
+
+    private void OnSelectedStatusesChanged(IEnumerable<string> selected)
+    {
+        _selectedStatuses = selected.ToList();
+        ApplyFilters();
+    }
+
+    private void ClearFilters()
+    {
+        _searchText = string.Empty;
+        _selectedTypes = [];
+        _selectedStatuses = [];
+        ApplyFilters();
+    }
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -165,29 +192,9 @@
     private static bool Matches(string? value, string term)
         => !string.IsNullOrEmpty(value) && value.Contains(term, StringComparison.OrdinalIgnoreCase);
 
-    private void OnSearchInput(ChangeEventArgs e)
+    private void OnSearchChanged(string value)
     {
-        _searchText = e.Value?.ToString() ?? string.Empty;
-        ApplyFilters();
-    }
-
-    private void ToggleTypeFilter(string typeName)
-    {
-        if (!_selectedTypes.Remove(typeName))
-        {
-            _selectedTypes.Add(typeName);
-        }
-
-        ApplyFilters();
-    }
-
-    private void ToggleStatusFilter(string statusName)
-    {
-        if (!_selectedStatuses.Remove(statusName))
-        {
-            _selectedStatuses.Add(statusName);
-        }
-
+        _searchText = value;
         ApplyFilters();
     }
 
@@ -203,34 +210,32 @@
         _selected = selectedId.HasValue ? await RequestService.GetByIdAsync(selectedId.Value) : null;
     }
 
-    private const string ExportFileName = "Release-Artifacts.xls";
+    private const string ExportFileName = "Release-Artifacts.csv";
 
-    // Telerik's grid export (the mechanism CLAUDE.md names) doesn't apply to this
-    // card-based master list — this produces a real Excel-openable file via the
-    // well-known HTML-table + "application/vnd.ms-excel" MIME trick, with no JS
-    // interop or extra dependency required.
+    // Export visible rows as CSV data URI to keep export dependency-free while
+    // avoiding HTML table generation.
     private string ExportHref
     {
         get
         {
-            var html = new StringBuilder()
-                .Append("<table><tr><th>ID</th><th>Title</th><th>Version</th><th>Type</th><th>Status</th><th>Requestor</th><th>Date</th></tr>");
+            var rows = _visibleRequests.Select(r => string.Join(",",
+                r.RequestId.ToString(),
+                EscapeCsv(r.Title),
+                EscapeCsv(r.Version),
+                EscapeCsv(r.RequestType?.Name),
+                EscapeCsv(r.RequestStatus?.Name),
+                EscapeCsv(r.Requestor?.FullName),
+                EscapeCsv(r.LogDate.ToString("yyyy-MM-dd"))));
 
-            foreach (var r in _visibleRequests)
-            {
-                html.Append("<tr>")
-                    .Append($"<td>{r.RequestId}</td>")
-                    .Append($"<td>{WebUtility.HtmlEncode(r.Title)}</td>")
-                    .Append($"<td>{WebUtility.HtmlEncode(r.Version)}</td>")
-                    .Append($"<td>{WebUtility.HtmlEncode(r.RequestType?.Name)}</td>")
-                    .Append($"<td>{WebUtility.HtmlEncode(r.RequestStatus?.Name)}</td>")
-                    .Append($"<td>{WebUtility.HtmlEncode(r.Requestor?.FullName)}</td>")
-                    .Append($"<td>{r.LogDate:yyyy-MM-dd}</td>")
-                    .Append("</tr>");
-            }
+            var csv = new StringBuilder()
+                .AppendLine("ID,Title,Version,Type,Status,Requestor,Date")
+                .AppendJoin(Environment.NewLine, rows)
+                .ToString();
 
-            html.Append("</table>");
-            return $"data:application/vnd.ms-excel;base64,{Convert.ToBase64String(Encoding.UTF8.GetBytes(html.ToString()))}";
+            return $"data:text/csv;base64,{Convert.ToBase64String(Encoding.UTF8.GetBytes(csv))}";
         }
     }
+
+    private static string EscapeCsv(string? value)
+        => $"\"{(value ?? string.Empty).Replace("\"", "\"\"")}\"";
 }
