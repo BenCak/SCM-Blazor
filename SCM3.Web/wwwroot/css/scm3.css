@@ -332,6 +332,7 @@ html, body {
     flex: 1;
     min-width: 0;
     overflow-y: auto;
+    scroll-behavior: smooth; /* smooth-scrolls to #section-* anchors from the section nav */
 }
 
 .scm3-detail-empty {
@@ -409,6 +410,38 @@ html, body {
     color: var(--scm3-primary);
     padding: 0.4rem 0.7rem;
     font-size: 0.85rem;
+}
+
+/* Detail-panel section nav + accordion sections (replaces TabStrip — root CLAUDE.md §7) */
+
+.scm3-detail-section-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.scm3-detail-section-nav a {
+    font-size: 0.85rem;
+    color: var(--scm3-accent, #2e86c1);
+    text-decoration: none;
+}
+
+.scm3-detail-section-nav a:hover {
+    text-decoration: underline;
+}
+
+.scm3-detail-section-anchor {
+    scroll-margin-top: 0.5rem;
+}
+
+.scm3-detail-subsection-title {
+    margin: 0.75rem 0 0.25rem;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #888;
 }
 
 /* Actions bar ------------------------------------------------------------------------- */

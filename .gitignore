@@ -4,3 +4,7 @@ obj/
 
 # Telerik license key — set via user-secrets/env var per dev, never commit
 telerik-license.txt
+
+# SQLite WAL-mode runtime files — regenerated on each run, never commit
+*.db-shm
+*.db-wal

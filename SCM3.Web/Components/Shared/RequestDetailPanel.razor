@@ -1,22 +1,30 @@
 @*
     Detail panel for the master-detail dashboard (root CLAUDE.md §7): header strip,
-    role/state-driven actions bar, TelerikTabStrip for five sections (Release Information,
-    Relationships, Attachments, SCM Status, Audit Log), and TelerikDrawer for the RHS
-    History / Change Log slide-in panels — replacing the old anchor-link nav, custom
-    AccordionSection components, and raw HTML tables/lists (SCM3.Web/CLAUDE.md Telerik
-    rule). All list/tabular data uses TelerikGrid; list displays use TelerikListView;
-    sub-groups use CollapsibleSection (data-bound TelerikPanelBar wrapper — see that
-    component for why declarative <PanelBarItem><ChildContent> markup doesn't work against
-    Telerik 14.0.0); dropdowns use TelerikDropDownList; text areas use
-    TelerikTextArea; status badges use TelerikChip. Inline editing covers Charge #,
-    Priority, and SCM Status fields; per-type Release Information / Relationships fields
-    render read-only from the attribute DTOs (root CLAUDE.md §5).
+    role/state-driven actions bar, an anchor-link section nav over five collapsible
+    accordion sections (Release Information, Relationships, Attachments, SCM Status,
+    Audit Log — each a top-level CollapsibleSection so users see/expand them on one
+    scrollable page instead of switching tabs, per the "tabs hide information, accordions
+    reveal information" redesign brief, 2026-06-08), and TelerikDrawer for the RHS
+    History / Change Log slide-in panels. All list/tabular data uses TelerikGrid; list
+    displays use TelerikListView; the five top-level sections — and ONLY the top level —
+    use CollapsibleSection (data-bound TelerikPanelBar wrapper; see that component for why
+    declarative <PanelBarItem><ChildContent> markup doesn't work against Telerik 14.0.0).
+    Sub-groups within a section (DCNs, Requestor Information, Common Libraries, State
+    Changes, Notes, etc.) render as plain labelled sub-headings rather than nested
+    CollapsibleSections — nesting one TelerikPanelBar inside another's ContentTemplate is
+    untested against this Telerik version, and flattening keeps each expanded section
+    compact and immediately scannable (matches the brief's "improve information density").
+    Dropdowns use TelerikDropDownList; text areas use TelerikTextArea; status badges use
+    TelerikChip. Inline editing covers Charge #, Priority, and SCM Status fields; per-type
+    Release Information / Relationships fields render read-only from the attribute DTOs
+    (root CLAUDE.md §5).
 *@
 @using System.Text.Json
 @using SCM3.Data.Entities.Attributes
 @inject IRequestService RequestService
 @inject IUserService UserService
 @inject ICurrentUserService CurrentUser
+@inject IJSRuntime JS
 
 <TelerikDrawer TItem="string"
                @bind-Expanded="@_showRightPanel"
@@ -122,11 +130,30 @@
                 }
             </div>
 
-            @* ── Five-section TelerikTabStrip ─────────────────────── *@
-            <TelerikTabStrip>
+            @* ── Anchor-link section nav + accordion sections ─────────────────────
+               Plain `href="#section-x"` gets caught TWICE on the way to the browser:
+               (1) Blazor Web App's global enhanced-navigation click listener
+               (registered on `document` in blazor.web.js) intercepts same-document
+               anchor clicks before our `@onclick:preventDefault` is guaranteed to
+               win the race, resolves the href against `<base href="/">`, and routes
+               to "/" (Home — "Hello, world!") instead of letting it scroll;
+               (2) even if that didn't fire, the browser's own fragment-navigation
+               would do the same `<base href>` resolution. `data-enhance-nav="false"`
+               is the documented opt-out — Blazor's `Ri` click handler walks up via
+               `closest("[data-enhance-nav]")` and skips interception entirely for
+               this subtree, so only our @onclick (which prevents default and scrolls
+               via JS interop) runs. ─────────────────────────────────────────────── *@
+            <nav class="scm3-detail-section-nav" data-enhance-nav="false">
+                <a href="#section-release-info" @onclick="@(() => ScrollToSectionAsync("section-release-info"))" @onclick:preventDefault="true">Release Information</a>
+                <a href="#section-relationships" @onclick="@(() => ScrollToSectionAsync("section-relationships"))" @onclick:preventDefault="true">Relationships</a>
+                <a href="#section-attachments" @onclick="@(() => ScrollToSectionAsync("section-attachments"))" @onclick:preventDefault="true">Attachments (@_attachments.Count)</a>
+                <a href="#section-scm-status" @onclick="@(() => ScrollToSectionAsync("section-scm-status"))" @onclick:preventDefault="true">SCM Status</a>
+                <a href="#section-audit-log" @onclick="@(() => ScrollToSectionAsync("section-audit-log"))" @onclick:preventDefault="true">Audit Log</a>
+            </nav>
 
-                @* Tab 1 — Release Information *@
-                <TabStripTab Title="@ReleaseInformationTitle">
+            @* ── Section 1 — Release Information ──────────────────── *@
+            <div id="section-release-info" class="scm3-detail-section-anchor">
+                <CollapsibleSection Title="@ReleaseInformationTitle" Expanded="true">
                     @switch (Request.RequestType?.Name)
                     {
                         case "System":
@@ -145,14 +172,13 @@
                                 @FieldDiv("Release Description", Request.ReleaseDescription)
                                 @FieldDiv("Notes To SCM", Request.NotesToScm)
                             </div>
-                            <CollapsibleSection Title="Requestor Information" Expanded="true">
-                                <div class="scm3-detail-fields">
-                                    @FieldDiv("Requestor Name", Request.RequestorName ?? Request.Requestor?.FullName)
-                                    @FieldDiv("Requestor Email", Request.RequestorEmail ?? Request.Requestor?.Email)
-                                    @FieldDiv("Requestor Phone", Request.RequestorPhone)
-                                    @FieldDiv("Charge Number", Request.ChargeNumber)
-                                </div>
-                            </CollapsibleSection>
+                            <h4 class="scm3-detail-subsection-title">Requestor Information</h4>
+                            <div class="scm3-detail-fields">
+                                @FieldDiv("Requestor Name", Request.RequestorName ?? Request.Requestor?.FullName)
+                                @FieldDiv("Requestor Email", Request.RequestorEmail ?? Request.Requestor?.Email)
+                                @FieldDiv("Requestor Phone", Request.RequestorPhone)
+                                @FieldDiv("Charge Number", Request.ChargeNumber)
+                            </div>
                             break;
 
                         case "Segment":
@@ -181,15 +207,14 @@
                                 @FieldDiv("Notes To SCM", Request.NotesToScm)
                                 @FieldDiv("CSCI Only Release", _asiCsciAttrs is null ? null : YesNo(_asiCsciAttrs.CsciOnlyRelease))
                             </div>
-                            <CollapsibleSection Title="DCNs" Expanded="true">
-                                <TelerikGrid Data="@(_asiCsciAttrs?.Dcns ?? [])">
-                                    <GridColumns>
-                                        <GridColumn Field="@nameof(AsiCsciReleaseAttributes.DcnEntry.DcnNumber)" Title="DCN Number" />
-                                        <GridColumn Field="@nameof(AsiCsciReleaseAttributes.DcnEntry.Title)" Title="Title" />
-                                        <GridColumn Field="@nameof(AsiCsciReleaseAttributes.DcnEntry.Status)" Title="Status" />
-                                    </GridColumns>
-                                </TelerikGrid>
-                            </CollapsibleSection>
+                            <h4 class="scm3-detail-subsection-title">DCNs</h4>
+                            <TelerikGrid Data="@(_asiCsciAttrs?.Dcns ?? [])">
+                                <GridColumns>
+                                    <GridColumn Field="@nameof(AsiCsciReleaseAttributes.DcnEntry.DcnNumber)" Title="DCN Number" />
+                                    <GridColumn Field="@nameof(AsiCsciReleaseAttributes.DcnEntry.Title)" Title="Title" />
+                                    <GridColumn Field="@nameof(AsiCsciReleaseAttributes.DcnEntry.Status)" Title="Status" />
+                                </GridColumns>
+                            </TelerikGrid>
                             break;
 
                         case "CSCI Supplier":
@@ -208,55 +233,52 @@
                                 @FieldDiv("Release Description", Request.ReleaseDescription)
                                 @FieldDiv("Notes To SCM", Request.NotesToScm)
                             </div>
-                            <CollapsibleSection Title="DCNs" Expanded="true">
-                                <TelerikGrid Data="@(_supplierCsciAttrs?.Dcns ?? [])">
-                                    <GridColumns>
-                                        <GridColumn Field="@nameof(SupplierCsciReleaseAttributes.DcnEntry.DcnNumber)" Title="DCN Number" />
-                                        <GridColumn Field="@nameof(SupplierCsciReleaseAttributes.DcnEntry.Title)" Title="Title" />
-                                        <GridColumn Field="@nameof(SupplierCsciReleaseAttributes.DcnEntry.Status)" Title="Status" />
-                                    </GridColumns>
-                                </TelerikGrid>
-                            </CollapsibleSection>
+                            <h4 class="scm3-detail-subsection-title">DCNs</h4>
+                            <TelerikGrid Data="@(_supplierCsciAttrs?.Dcns ?? [])">
+                                <GridColumns>
+                                    <GridColumn Field="@nameof(SupplierCsciReleaseAttributes.DcnEntry.DcnNumber)" Title="DCN Number" />
+                                    <GridColumn Field="@nameof(SupplierCsciReleaseAttributes.DcnEntry.Title)" Title="Title" />
+                                    <GridColumn Field="@nameof(SupplierCsciReleaseAttributes.DcnEntry.Status)" Title="Status" />
+                                </GridColumns>
+                            </TelerikGrid>
                             break;
 
                         case "Third Party SW":
-                            <CollapsibleSection Title="Product Information" Expanded="true">
-                                <div class="scm3-detail-fields">
-                                    @FieldDiv("Vendor", _thirdPartyAttrs?.Vendor)
-                                    @FieldDiv("Product Name", _thirdPartyAttrs?.ProductName)
-                                    @FieldDiv("Product Version", _thirdPartyAttrs?.ProductVersion)
-                                    @FieldDiv("Country Of Origin", _thirdPartyAttrs?.CountryOfOrigin)
-                                    @FieldDiv("Source", _thirdPartyAttrs?.Source)
-                                    @FieldDiv("Product URL", _thirdPartyAttrs?.ProductUrl)
-                                    @FieldDiv("Source Location", _thirdPartyAttrs?.SourceLocation)
-                                    @FieldDiv("Internal Location", _thirdPartyAttrs?.InternalLocation)
-                                    @FieldDiv("Download File Names", _thirdPartyAttrs?.DownloadFileNames)
-                                    @FieldDiv("Download Location", _thirdPartyAttrs?.DownloadLocation)
-                                    @FieldDiv("Intended Use", _thirdPartyAttrs?.IntendedUse)
-                                    @FieldDiv("Platform", _thirdPartyAttrs?.Platform)
-                                    @FieldDiv("Point Of Contact", _thirdPartyAttrs?.PointOfContact)
-                                    @FieldDiv("Binary / Source / Both", _thirdPartyAttrs?.BinarySourceOrBoth)
-                                </div>
-                            </CollapsibleSection>
-                            <CollapsibleSection Title="Licensing" Expanded="true">
-                                <div class="scm3-detail-fields">
-                                    @FieldDiv("License Type", _thirdPartyAttrs?.LicenseType)
-                                    @FieldDiv("Product License", _thirdPartyAttrs?.ProductLicense)
-                                    @FieldDiv("Contains OSS", _thirdPartyAttrs is null ? null : YesNo(_thirdPartyAttrs.ContainsOss))
-                                    @FieldDiv("Patent", _thirdPartyAttrs?.Patent)
-                                    @FieldDiv("Patent Non Assert Needed", _thirdPartyAttrs?.PatentNonAssertNeeded)
-                                    @FieldDiv("Patent Non Assert Approval", _thirdPartyAttrs?.PatentNonAssertApproval)
-                                    @FieldDiv("Software License Agreement", _thirdPartyAttrs?.SoftwareLicenseAgreement)
-                                    @FieldDiv("License URL", _thirdPartyAttrs?.LicenseUrl)
-                                    @FieldDiv("License Tracking Method", _thirdPartyAttrs?.LicenseTrackingMethod)
-                                    @FieldDiv("OSS Obligations", _thirdPartyAttrs?.OssObligations)
-                                    @FieldDiv("Export Compliance", _thirdPartyAttrs?.ExportCompliance)
-                                    @FieldDiv("Manager Approval", _thirdPartyAttrs?.ManagerApproval)
-                                    @FieldDiv("Approver", _thirdPartyAttrs?.Approver)
-                                    @FieldDiv("Approval Date", FormatDate(_thirdPartyAttrs?.ApprovalDate))
-                                    @FieldDiv("Status", _thirdPartyAttrs?.Status)
-                                </div>
-                            </CollapsibleSection>
+                            <h4 class="scm3-detail-subsection-title">Product Information</h4>
+                            <div class="scm3-detail-fields">
+                                @FieldDiv("Vendor", _thirdPartyAttrs?.Vendor)
+                                @FieldDiv("Product Name", _thirdPartyAttrs?.ProductName)
+                                @FieldDiv("Product Version", _thirdPartyAttrs?.ProductVersion)
+                                @FieldDiv("Country Of Origin", _thirdPartyAttrs?.CountryOfOrigin)
+                                @FieldDiv("Source", _thirdPartyAttrs?.Source)
+                                @FieldDiv("Product URL", _thirdPartyAttrs?.ProductUrl)
+                                @FieldDiv("Source Location", _thirdPartyAttrs?.SourceLocation)
+                                @FieldDiv("Internal Location", _thirdPartyAttrs?.InternalLocation)
+                                @FieldDiv("Download File Names", _thirdPartyAttrs?.DownloadFileNames)
+                                @FieldDiv("Download Location", _thirdPartyAttrs?.DownloadLocation)
+                                @FieldDiv("Intended Use", _thirdPartyAttrs?.IntendedUse)
+                                @FieldDiv("Platform", _thirdPartyAttrs?.Platform)
+                                @FieldDiv("Point Of Contact", _thirdPartyAttrs?.PointOfContact)
+                                @FieldDiv("Binary / Source / Both", _thirdPartyAttrs?.BinarySourceOrBoth)
+                            </div>
+                            <h4 class="scm3-detail-subsection-title">Licensing</h4>
+                            <div class="scm3-detail-fields">
+                                @FieldDiv("License Type", _thirdPartyAttrs?.LicenseType)
+                                @FieldDiv("Product License", _thirdPartyAttrs?.ProductLicense)
+                                @FieldDiv("Contains OSS", _thirdPartyAttrs is null ? null : YesNo(_thirdPartyAttrs.ContainsOss))
+                                @FieldDiv("Patent", _thirdPartyAttrs?.Patent)
+                                @FieldDiv("Patent Non Assert Needed", _thirdPartyAttrs?.PatentNonAssertNeeded)
+                                @FieldDiv("Patent Non Assert Approval", _thirdPartyAttrs?.PatentNonAssertApproval)
+                                @FieldDiv("Software License Agreement", _thirdPartyAttrs?.SoftwareLicenseAgreement)
+                                @FieldDiv("License URL", _thirdPartyAttrs?.LicenseUrl)
+                                @FieldDiv("License Tracking Method", _thirdPartyAttrs?.LicenseTrackingMethod)
+                                @FieldDiv("OSS Obligations", _thirdPartyAttrs?.OssObligations)
+                                @FieldDiv("Export Compliance", _thirdPartyAttrs?.ExportCompliance)
+                                @FieldDiv("Manager Approval", _thirdPartyAttrs?.ManagerApproval)
+                                @FieldDiv("Approver", _thirdPartyAttrs?.Approver)
+                                @FieldDiv("Approval Date", FormatDate(_thirdPartyAttrs?.ApprovalDate))
+                                @FieldDiv("Status", _thirdPartyAttrs?.Status)
+                            </div>
                             break;
 
                         case "EE Request":
@@ -289,126 +311,119 @@
                             </div>
                             @if (_attributeRows.Count > 0)
                             {
-                                <CollapsibleSection Title="Type-Specific Details (legacy shape — TBD, root CLAUDE.md §17.1)" Expanded="true">
-                                    <TelerikGrid Data="@_attributeRows">
-                                        <GridColumns>
-                                            <GridColumn Field="@nameof(AttributeRow.Key)" Title="Attribute" />
-                                            <GridColumn Field="@nameof(AttributeRow.Display)" Title="Value" />
-                                        </GridColumns>
-                                    </TelerikGrid>
-                                </CollapsibleSection>
+                                <h4 class="scm3-detail-subsection-title">Type-Specific Details (legacy shape — TBD, root CLAUDE.md §17.1)</h4>
+                                <TelerikGrid Data="@_attributeRows">
+                                    <GridColumns>
+                                        <GridColumn Field="@nameof(AttributeRow.Key)" Title="Attribute" />
+                                        <GridColumn Field="@nameof(AttributeRow.Display)" Title="Value" />
+                                    </GridColumns>
+                                </TelerikGrid>
                             }
                             break;
                     }
-                </TabStripTab>
+                </CollapsibleSection>
+            </div>
 
-                @* Tab 2 — Relationships *@
-                <TabStripTab Title="Relationships">
+            @* ── Section 2 — Relationships ─────────────────────────── *@
+            <div id="section-relationships" class="scm3-detail-section-anchor">
+                <CollapsibleSection Title="Relationships" Expanded="false">
                     @switch (Request.RequestType?.Name)
                     {
                         case "System":
-                            <CollapsibleSection Title="Associations — Segments" Expanded="true">
-                                <TelerikGrid Data="@(_systemAttrs?.AssociatedSegments ?? [])">
-                                    <GridColumns>
-                                        <GridColumn Field="@nameof(SystemReleaseAttributes.SegmentAssociation.SegmentName)" Title="Segment Name" />
-                                        <GridColumn Field="@nameof(SystemReleaseAttributes.SegmentAssociation.Version)" Title="Version" />
-                                        <GridColumn Field="@nameof(SystemReleaseAttributes.SegmentAssociation.State)" Title="State" />
-                                    </GridColumns>
-                                </TelerikGrid>
-                            </CollapsibleSection>
-                            <CollapsibleSection Title="Associated Items — Segments" Expanded="true">
-                                <TelerikGrid Data="@(_systemAttrs?.AssociatedItemSegments ?? [])">
-                                    <GridColumns>
-                                        <GridColumn Field="@nameof(SystemReleaseAttributes.SegmentAssociatedItem.SegmentName)" Title="Segment Name" />
-                                        <GridColumn Field="@nameof(SystemReleaseAttributes.SegmentAssociatedItem.Version)" Title="Version" />
-                                    </GridColumns>
-                                </TelerikGrid>
-                            </CollapsibleSection>
-                            <CollapsibleSection Title="Compatible Software" Expanded="true">
-                                <TelerikGrid Data="@(_systemAttrs?.CompatibleSoftware ?? [])">
-                                    <GridColumns>
-                                        <GridColumn Field="@nameof(SystemReleaseAttributes.CompatibleSoftwareEntry.Name)" Title="Name" />
-                                        <GridColumn Field="@nameof(SystemReleaseAttributes.CompatibleSoftwareEntry.Version)" Title="Version" />
-                                    </GridColumns>
-                                </TelerikGrid>
-                            </CollapsibleSection>
+                            <h4 class="scm3-detail-subsection-title">Associations — Segments</h4>
+                            <TelerikGrid Data="@(_systemAttrs?.AssociatedSegments ?? [])">
+                                <GridColumns>
+                                    <GridColumn Field="@nameof(SystemReleaseAttributes.SegmentAssociation.SegmentName)" Title="Segment Name" />
+                                    <GridColumn Field="@nameof(SystemReleaseAttributes.SegmentAssociation.Version)" Title="Version" />
+                                    <GridColumn Field="@nameof(SystemReleaseAttributes.SegmentAssociation.State)" Title="State" />
+                                </GridColumns>
+                            </TelerikGrid>
+                            <h4 class="scm3-detail-subsection-title">Associated Items — Segments</h4>
+                            <TelerikGrid Data="@(_systemAttrs?.AssociatedItemSegments ?? [])">
+                                <GridColumns>
+                                    <GridColumn Field="@nameof(SystemReleaseAttributes.SegmentAssociatedItem.SegmentName)" Title="Segment Name" />
+                                    <GridColumn Field="@nameof(SystemReleaseAttributes.SegmentAssociatedItem.Version)" Title="Version" />
+                                </GridColumns>
+                            </TelerikGrid>
+                            <h4 class="scm3-detail-subsection-title">Compatible Software</h4>
+                            <TelerikGrid Data="@(_systemAttrs?.CompatibleSoftware ?? [])">
+                                <GridColumns>
+                                    <GridColumn Field="@nameof(SystemReleaseAttributes.CompatibleSoftwareEntry.Name)" Title="Name" />
+                                    <GridColumn Field="@nameof(SystemReleaseAttributes.CompatibleSoftwareEntry.Version)" Title="Version" />
+                                </GridColumns>
+                            </TelerikGrid>
                             break;
 
                         case "Segment":
-                            <CollapsibleSection Title="Associations — CSCIs" Expanded="true">
-                                <TelerikGrid Data="@(_segmentAttrs?.AssociatedCscis ?? [])">
-                                    <GridColumns>
-                                        <GridColumn Field="@nameof(SegmentReleaseAttributes.CsciAssociation.CsciName)" Title="CSCI Name" />
-                                        <GridColumn Field="@nameof(SegmentReleaseAttributes.CsciAssociation.Version)" Title="Version" />
-                                        <GridColumn Field="@nameof(SegmentReleaseAttributes.CsciAssociation.State)" Title="State" />
-                                    </GridColumns>
-                                </TelerikGrid>
-                            </CollapsibleSection>
+                            <h4 class="scm3-detail-subsection-title">Associations — CSCIs</h4>
+                            <TelerikGrid Data="@(_segmentAttrs?.AssociatedCscis ?? [])">
+                                <GridColumns>
+                                    <GridColumn Field="@nameof(SegmentReleaseAttributes.CsciAssociation.CsciName)" Title="CSCI Name" />
+                                    <GridColumn Field="@nameof(SegmentReleaseAttributes.CsciAssociation.Version)" Title="Version" />
+                                    <GridColumn Field="@nameof(SegmentReleaseAttributes.CsciAssociation.State)" Title="State" />
+                                </GridColumns>
+                            </TelerikGrid>
                             break;
 
                         case "CSCI GA-ASI":
-                            <CollapsibleSection Title="Common Libraries" Expanded="true">
-                                <TelerikGrid Data="@(_asiCsciAttrs?.CommonLibraries ?? [])">
-                                    <GridColumns>
-                                        <GridColumn Field="@nameof(AsiCsciReleaseAttributes.CommonLibraryEntry.LibraryName)" Title="Library Name" />
-                                        <GridColumn Field="@nameof(AsiCsciReleaseAttributes.CommonLibraryEntry.Version)" Title="Version" />
-                                    </GridColumns>
-                                </TelerikGrid>
-                            </CollapsibleSection>
-                            <CollapsibleSection Title="Build Targets" Expanded="true">
-                                <TelerikGrid Data="@(_asiCsciAttrs?.BuildTargets ?? [])">
-                                    <GridColumns>
-                                        <GridColumn Field="@nameof(AsiCsciReleaseAttributes.BuildTargetEntry.BuildTarget)" Title="Build Target" />
-                                        <GridColumn Field="@nameof(AsiCsciReleaseAttributes.BuildTargetEntry.Platform)" Title="Platform" />
-                                    </GridColumns>
-                                </TelerikGrid>
-                            </CollapsibleSection>
-                            <CollapsibleSection Title="LRU Part Numbers" Expanded="true">
-                                <TelerikGrid Data="@(_asiCsciAttrs?.LruPartNumbers ?? [])">
-                                    <GridColumns>
-                                        <GridColumn Field="@nameof(AsiCsciReleaseAttributes.LruPartNumberEntry.PartNumber)" Title="Part Number" />
-                                        <GridColumn Field="@nameof(AsiCsciReleaseAttributes.LruPartNumberEntry.Description)" Title="Description" />
-                                    </GridColumns>
-                                </TelerikGrid>
-                            </CollapsibleSection>
-                            <CollapsibleSection Title="Associated Third Party Software" Expanded="true">
-                                <TelerikGrid Data="@(_asiCsciAttrs?.AssociatedThirdPartySoftware ?? [])">
-                                    <GridColumns>
-                                        <GridColumn Field="@nameof(AsiCsciReleaseAttributes.AssociatedThirdPartySoftwareEntry.Vendor)" Title="Vendor" />
-                                        <GridColumn Field="@nameof(AsiCsciReleaseAttributes.AssociatedThirdPartySoftwareEntry.Product)" Title="Product" />
-                                        <GridColumn Field="@nameof(AsiCsciReleaseAttributes.AssociatedThirdPartySoftwareEntry.Version)" Title="Version" />
-                                    </GridColumns>
-                                </TelerikGrid>
-                            </CollapsibleSection>
+                            <h4 class="scm3-detail-subsection-title">Common Libraries</h4>
+                            <TelerikGrid Data="@(_asiCsciAttrs?.CommonLibraries ?? [])">
+                                <GridColumns>
+                                    <GridColumn Field="@nameof(AsiCsciReleaseAttributes.CommonLibraryEntry.LibraryName)" Title="Library Name" />
+                                    <GridColumn Field="@nameof(AsiCsciReleaseAttributes.CommonLibraryEntry.Version)" Title="Version" />
+                                </GridColumns>
+                            </TelerikGrid>
+                            <h4 class="scm3-detail-subsection-title">Build Targets</h4>
+                            <TelerikGrid Data="@(_asiCsciAttrs?.BuildTargets ?? [])">
+                                <GridColumns>
+                                    <GridColumn Field="@nameof(AsiCsciReleaseAttributes.BuildTargetEntry.BuildTarget)" Title="Build Target" />
+                                    <GridColumn Field="@nameof(AsiCsciReleaseAttributes.BuildTargetEntry.Platform)" Title="Platform" />
+                                </GridColumns>
+                            </TelerikGrid>
+                            <h4 class="scm3-detail-subsection-title">LRU Part Numbers</h4>
+                            <TelerikGrid Data="@(_asiCsciAttrs?.LruPartNumbers ?? [])">
+                                <GridColumns>
+                                    <GridColumn Field="@nameof(AsiCsciReleaseAttributes.LruPartNumberEntry.PartNumber)" Title="Part Number" />
+                                    <GridColumn Field="@nameof(AsiCsciReleaseAttributes.LruPartNumberEntry.Description)" Title="Description" />
+                                </GridColumns>
+                            </TelerikGrid>
+                            <h4 class="scm3-detail-subsection-title">Associated Third Party Software</h4>
+                            <TelerikGrid Data="@(_asiCsciAttrs?.AssociatedThirdPartySoftware ?? [])">
+                                <GridColumns>
+                                    <GridColumn Field="@nameof(AsiCsciReleaseAttributes.AssociatedThirdPartySoftwareEntry.Vendor)" Title="Vendor" />
+                                    <GridColumn Field="@nameof(AsiCsciReleaseAttributes.AssociatedThirdPartySoftwareEntry.Product)" Title="Product" />
+                                    <GridColumn Field="@nameof(AsiCsciReleaseAttributes.AssociatedThirdPartySoftwareEntry.Version)" Title="Version" />
+                                </GridColumns>
+                            </TelerikGrid>
                             break;
 
                         case "CSCI Supplier":
-                            <CollapsibleSection Title="Binary Checksums" Expanded="true">
-                                <TelerikGrid Data="@(_supplierCsciAttrs?.BinaryChecksums ?? [])">
-                                    <GridColumns>
-                                        <GridColumn Field="@nameof(SupplierCsciReleaseAttributes.BinaryChecksumEntry.Checksum)" Title="Checksum" />
-                                        <GridColumn Field="@nameof(SupplierCsciReleaseAttributes.BinaryChecksumEntry.Algorithm)" Title="Algorithm" />
-                                    </GridColumns>
-                                </TelerikGrid>
-                            </CollapsibleSection>
-                            <CollapsibleSection Title="LRE Part Numbers" Expanded="true">
-                                <TelerikGrid Data="@(_supplierCsciAttrs?.LrePartNumbers ?? [])">
-                                    <GridColumns>
-                                        <GridColumn Field="@nameof(SupplierCsciReleaseAttributes.LrePartNumberEntry.PartNumber)" Title="Part Number" />
-                                        <GridColumn Field="@nameof(SupplierCsciReleaseAttributes.LrePartNumberEntry.Description)" Title="Description" />
-                                    </GridColumns>
-                                </TelerikGrid>
-                            </CollapsibleSection>
+                            <h4 class="scm3-detail-subsection-title">Binary Checksums</h4>
+                            <TelerikGrid Data="@(_supplierCsciAttrs?.BinaryChecksums ?? [])">
+                                <GridColumns>
+                                    <GridColumn Field="@nameof(SupplierCsciReleaseAttributes.BinaryChecksumEntry.Checksum)" Title="Checksum" />
+                                    <GridColumn Field="@nameof(SupplierCsciReleaseAttributes.BinaryChecksumEntry.Algorithm)" Title="Algorithm" />
+                                </GridColumns>
+                            </TelerikGrid>
+                            <h4 class="scm3-detail-subsection-title">LRE Part Numbers</h4>
+                            <TelerikGrid Data="@(_supplierCsciAttrs?.LrePartNumbers ?? [])">
+                                <GridColumns>
+                                    <GridColumn Field="@nameof(SupplierCsciReleaseAttributes.LrePartNumberEntry.PartNumber)" Title="Part Number" />
+                                    <GridColumn Field="@nameof(SupplierCsciReleaseAttributes.LrePartNumberEntry.Description)" Title="Description" />
+                                </GridColumns>
+                            </TelerikGrid>
                             break;
 
                         default:
                             <p class="scm3-muted">@(Request.RequestType?.Name ?? "This artifact type") has no relationships to other release artifacts (root CLAUDE.md §5).</p>
                             break;
                     }
-                </TabStripTab>
+                </CollapsibleSection>
+            </div>
 
-                @* Tab 3 — Attachments *@
-                <TabStripTab Title="@($"Attachments ({_attachments.Count})")">
+            @* ── Section 3 — Attachments ───────────────────────────── *@
+            <div id="section-attachments" class="scm3-detail-section-anchor">
+                <CollapsibleSection Title="@($"Attachments ({_attachments.Count})")" Expanded="false">
                     <p class="scm3-muted">Upload categories for this artifact type: @AttachmentCategories</p>
                     <TelerikGrid Data="@_attachments">
                         <GridColumns>
@@ -426,10 +441,12 @@
                             <GridColumn Field="@nameof(RequestAttachment.LogDate)" Title="Date" DisplayFormat="{0:yyyy-MM-dd}" />
                         </GridColumns>
                     </TelerikGrid>
-                </TabStripTab>
+                </CollapsibleSection>
+            </div>
 
-                @* Tab 4 — SCM Status *@
-                <TabStripTab Title="SCM Status">
+            @* ── Section 4 — SCM Status ────────────────────────────── *@
+            <div id="section-scm-status" class="scm3-detail-section-anchor">
+                <CollapsibleSection Title="SCM Status" Expanded="false">
                     <div class="scm3-detail-fields">
                         @FieldDiv("Assigned To", _scmStatus?.AssignedTo?.FullName ?? "Unassigned")
                         @FieldDiv("SCM Status", _scmStatus?.Status)
@@ -475,61 +492,61 @@
                             <TelerikButton Enabled="@(!_busy)" OnClick="SaveScmStatusAsync">Save SCM Status</TelerikButton>
                         </div>
                     }
-                </TabStripTab>
+                </CollapsibleSection>
+            </div>
 
-                @* Tab 5 — Audit Log *@
-                <TabStripTab Title="Audit Log">
-                    <CollapsibleSection Title="State Changes" Expanded="true">
-                        <TelerikGrid Data="@_history">
-                            <GridColumns>
-                                <GridColumn Title="Transition">
-                                    <Template Context="historyCtx">
-                                        @(((RequestHistory)historyCtx).FromStatus?.Name ?? "—") → @(((RequestHistory)historyCtx).ToStatus?.Name ?? "—")
-                                    </Template>
-                                </GridColumn>
-                                <GridColumn Field="@nameof(RequestHistory.Action)" Title="Action" />
-                                <GridColumn Title="By">
-                                    <Template Context="historyCtx">
-                                        @(((RequestHistory)historyCtx).ActionBy?.FullName ?? "—")
-                                    </Template>
-                                </GridColumn>
-                                <GridColumn Field="@nameof(RequestHistory.LogDate)" Title="Date" DisplayFormat="{0:yyyy-MM-dd HH:mm}" />
-                                <GridColumn Title="Comment">
-                                    <Template Context="historyCtx">
-                                        @(((RequestHistory)historyCtx).Comment ?? "—")
-                                    </Template>
-                                </GridColumn>
-                            </GridColumns>
-                        </TelerikGrid>
-                    </CollapsibleSection>
-                    <CollapsibleSection Title="@($"Notes ({_notes.Count})")" Expanded="true">
-                        @if (CurrentUser.CanEdit(Request) || CurrentUser.IsInRole("SCM_Staff", "SCM_Admin"))
-                        {
-                            <div class="scm3-note-composer">
-                                <TelerikTextArea @bind-Value="_newNoteText" Placeholder="Add a note..." Rows="2" Width="100%" />
-                                <TelerikButton Enabled="@(!_busy && !string.IsNullOrWhiteSpace(_newNoteText))"
-                                               OnClick="AddNoteAsync">Add</TelerikButton>
-                            </div>
-                        }
-                        @if (_notes.Count == 0)
-                        {
-                            <p class="scm3-muted">No notes yet.</p>
-                        }
-                        else
-                        {
-                            <TelerikListView Data="@_notes">
-                                <Template Context="noteCtx">
-                                    <div class="scm3-note-item">
-                                        <div class="scm3-note-meta"><strong>@(((RequestNote)noteCtx).Author?.FullName)</strong> · @(((RequestNote)noteCtx).LogDate.ToString("yyyy-MM-dd HH:mm"))</div>
-                                        <div class="scm3-note-text">@(((RequestNote)noteCtx).NoteText)</div>
-                                    </div>
+            @* ── Section 5 — Audit Log ─────────────────────────────── *@
+            <div id="section-audit-log" class="scm3-detail-section-anchor">
+                <CollapsibleSection Title="Audit Log" Expanded="false">
+                    <h4 class="scm3-detail-subsection-title">State Changes</h4>
+                    <TelerikGrid Data="@_history">
+                        <GridColumns>
+                            <GridColumn Title="Transition">
+                                <Template Context="historyCtx">
+                                    @(((RequestHistory)historyCtx).FromStatus?.Name ?? "—") → @(((RequestHistory)historyCtx).ToStatus?.Name ?? "—")
                                 </Template>
-                            </TelerikListView>
-                        }
-                    </CollapsibleSection>
-                </TabStripTab>
+                            </GridColumn>
+                            <GridColumn Field="@nameof(RequestHistory.Action)" Title="Action" />
+                            <GridColumn Title="By">
+                                <Template Context="historyCtx">
+                                    @(((RequestHistory)historyCtx).ActionBy?.FullName ?? "—")
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field="@nameof(RequestHistory.LogDate)" Title="Date" DisplayFormat="{0:yyyy-MM-dd HH:mm}" />
+                            <GridColumn Title="Comment">
+                                <Template Context="historyCtx">
+                                    @(((RequestHistory)historyCtx).Comment ?? "—")
+                                </Template>
+                            </GridColumn>
+                        </GridColumns>
+                    </TelerikGrid>
 
-            </TelerikTabStrip>
+                    <h4 class="scm3-detail-subsection-title">@($"Notes ({_notes.Count})")</h4>
+                    @if (CurrentUser.CanEdit(Request) || CurrentUser.IsInRole("SCM_Staff", "SCM_Admin"))
+                    {
+                        <div class="scm3-note-composer">
+                            <TelerikTextArea @bind-Value="_newNoteText" Placeholder="Add a note..." Rows="2" Width="100%" />
+                            <TelerikButton Enabled="@(!_busy && !string.IsNullOrWhiteSpace(_newNoteText))"
+                                           OnClick="AddNoteAsync">Add</TelerikButton>
+                        </div>
+                    }
+                    @if (_notes.Count == 0)
+                    {
+                        <p class="scm3-muted">No notes yet.</p>
+                    }
+                    else
+                    {
+                        <TelerikListView Data="@_notes">
+                            <Template Context="noteCtx">
+                                <div class="scm3-note-item">
+                                    <div class="scm3-note-meta"><strong>@(((RequestNote)noteCtx).Author?.FullName)</strong> · @(((RequestNote)noteCtx).LogDate.ToString("yyyy-MM-dd HH:mm"))</div>
+                                    <div class="scm3-note-text">@(((RequestNote)noteCtx).NoteText)</div>
+                                </div>
+                            </Template>
+                        </TelerikListView>
+                    }
+                </CollapsibleSection>
+            </div>
         </div>
     </DrawerContent>
     <Template Context="drawerItem">
@@ -612,6 +629,9 @@
     // after an in-panel action mutates the selected request.
     [Parameter]
     public EventCallback OnChanged { get; set; }
+
+    private async Task ScrollToSectionAsync(string elementId)
+        => await JS.InvokeVoidAsync("scm3.scrollToElement", elementId);
 
     private int? _loadedForRequestId;
 
