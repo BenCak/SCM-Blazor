@@ -9,18 +9,18 @@
 *@
 <PageTitle>Manage Users · SCM3 Portal</PageTitle>
 
-<div class="scm3-admin-page">
+<div class="p-3">
     <h1>Manage Users</h1>
-    <p class="scm3-muted">Roles and contact info for every AD-synced user (root CLAUDE.md §3 — new logins are auto-created here as Viewer).</p>
+    <p class="text-muted">Roles and contact info for every AD-synced user (root CLAUDE.md §3 — new logins are auto-created here as Viewer).</p>
 
     @if (_statusMessage is not null)
     {
-        <p class="scm3-detail-status-message">@_statusMessage</p>
+        <p class="alert alert-info">@_statusMessage</p>
     }
 
     @if (_loading)
     {
-        <p class="scm3-muted">Loading users…</p>
+        <p class="text-muted">Loading users…</p>
     }
     else
     {

@@ -1,0 +1,71 @@
+.scm3-nav {
+    width: 100%;
+    padding: 0.5rem 0;
+}
+
+.scm3-nav-section {
+    width: 100%;
+}
+
+.scm3-nav-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.625rem 0.75rem;
+    gap: 0.625rem;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.scm3-nav-row:hover {
+    color: inherit;
+    background: color-mix(in srgb, currentColor 9%, transparent);
+}
+
+.scm3-nav-row:focus-visible {
+    outline: 2px solid var(--kendo-color-primary, #0d6efd);
+    outline-offset: -2px;
+}
+
+.scm3-nav-section-button {
+    font: inherit;
+    font-weight: 600;
+}
+
+.scm3-nav-children {
+    display: flex;
+    flex-direction: column;
+}
+
+.scm3-nav-link {
+    padding-left: 1.5rem;
+}
+
+.scm3-nav-link.active {
+    color: var(--kendo-color-primary, #0d6efd);
+    background: color-mix(in srgb, var(--kendo-color-primary, #0d6efd) 12%, transparent);
+    font-weight: 600;
+}
+
+.scm3-nav-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+}
+
+.scm3-nav-label {
+    min-width: 0;
+    flex: 1;
+}
+
+.scm3-nav-chevron {
+    display: inline-flex;
+    margin-left: auto;
+}

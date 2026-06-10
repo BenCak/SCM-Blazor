@@ -11,8 +11,8 @@ public class User
     // Single role per user — not many-to-many (root CLAUDE.md §2)
     public string Role { get; set; } = string.Empty;
 
-    // Preferred Telerik theme, e.g. "scm3-gasi", "scm3-gasi-dark"
-    public string Theme { get; set; } = "scm3-gasi";
+    // Preferred Telerik theme key — see SCM3.Web.Services.ThemeCatalog (e.g. "default", "default-ocean-blue")
+    public string Theme { get; set; } = "default";
 
     public bool IsDeleted { get; set; }
     public DateTime LogDate { get; set; } = DateTime.UtcNow;

@@ -35,11 +35,11 @@ public static class SCM3Seeder
 
         // --- Demo login accounts (root CLAUDE.md §3 — mock login, no domain controller) ---
 
-        var viewer = new User { Username = "user", FullName = "Demo Viewer", Email = "user@ga-asi.com", Department = "Stakeholders", Role = "Viewer", Theme = "scm3-gasi" };
-        var scmStaff = new User { Username = "scm", FullName = "Demo SCM Staff", Email = "scm@ga-asi.com", Department = "SCM", Role = "SCM_Staff", Theme = "scm3-gasi" };
-        var scmAdmin = new User { Username = "scmadmin", FullName = "Demo SCM Admin", Email = "scmadmin@ga-asi.com", Department = "SCM", Role = "SCM_Admin", Theme = "scm3-gasi-dark" };
-        var teUser = new User { Username = "teuser", FullName = "Demo TE User", Email = "teuser@ga-asi.com", Department = "Test Engineering", Role = "TE_User", Theme = "scm3-gasi" };
-        var eeUser = new User { Username = "eeuser", FullName = "Demo EE User", Email = "eeuser@ga-asi.com", Department = "Electrical Engineering", Role = "EE_User", Theme = "scm3-gasi" };
+        var viewer = new User { Username = "user", FullName = "Demo Viewer", Email = "user@ga-asi.com", Department = "Stakeholders", Role = "Viewer", Theme = "default" };
+        var scmStaff = new User { Username = "scm", FullName = "Demo SCM Staff", Email = "scm@ga-asi.com", Department = "SCM", Role = "SCM_Staff", Theme = "default" };
+        var scmAdmin = new User { Username = "scmadmin", FullName = "Demo SCM Admin", Email = "scmadmin@ga-asi.com", Department = "SCM", Role = "SCM_Admin", Theme = "default-ocean-blue" };
+        var teUser = new User { Username = "teuser", FullName = "Demo TE User", Email = "teuser@ga-asi.com", Department = "Test Engineering", Role = "TE_User", Theme = "default" };
+        var eeUser = new User { Username = "eeuser", FullName = "Demo EE User", Email = "eeuser@ga-asi.com", Department = "Electrical Engineering", Role = "EE_User", Theme = "default" };
         context.Users.AddRange(viewer, scmStaff, scmAdmin, teUser, eeUser);
 
         // NOTE: root CLAUDE.md §2 says "6 Request Types + 8 Statuses", but only 7 types

@@ -12,11 +12,17 @@
 *@
 <PageTitle>Release Artifacts</PageTitle>
 
-<div class="scm3-dashboard">
-    <section class="scm3-master-list">
-        <div class="scm3-master-toolbar">
-            <h1>Release Artifacts</h1>
-            <a class="scm3-export-btn" href="@ExportHref" download="@ExportFileName" title="Export the visible list to Excel">⬇ Export Excel</a>
+<div class="dashboard">
+    <section class="master-list">
+        <div class="master-toolbar">
+            <h1 class="dashboard-title">Release Artifacts</h1>
+            <a class="export-btn"
+               href="@ExportHref"
+               download="@ExportFileName"
+               title="Export visible requests"
+               aria-label="Export visible requests">
+                <TelerikSvgIcon Icon="@Telerik.SvgIcons.SvgIcon.Download" />
+            </a>
         </div>
 
         <TelerikTextBox Value="@_searchText"
@@ -24,27 +30,31 @@
                        Placeholder="Search by name, ID, requestor, version, or parent…"
                        Width="100%" />
 
-        <div class="scm3-filter-group">
-            <span class="scm3-filter-group-label">Type</span>
+        <div class="filter-group type-filter-group">
+            <span class="filter-group-label">Type</span>
             <TelerikChipList TItem="string"
                              Rounded="Telerik.Blazor.ChipRounded.Full"
                              Data="@TypeChips"
                              SelectionMode="@Telerik.Blazor.ChipListSelectionMode.Multiple"
                              SelectedItems="@_selectedTypes"
                              SelectedItemsChanged="@OnSelectedTypesChanged">
-                <ItemTemplate>@context</ItemTemplate>
+                <ItemTemplate>
+                    <span class="@RequestDisplay.RequestTypeClass(context)">@context</span>
+                </ItemTemplate>
             </TelerikChipList>
         </div>
 
-        <div class="scm3-filter-group">
-            <span class="scm3-filter-group-label">Status</span>
+        <div class="filter-group status-filter-group">
+            <span class="filter-group-label">Status</span>
             <TelerikChipList TItem="string"
                              Rounded="Telerik.Blazor.ChipRounded.Full"
                              Data="@StatusChips"
                              SelectionMode="@Telerik.Blazor.ChipListSelectionMode.Multiple"
                              SelectedItems="@_selectedStatuses"
                              SelectedItemsChanged="@OnSelectedStatusesChanged">
-                <ItemTemplate>@context</ItemTemplate>
+                <ItemTemplate>
+                    <span class="@RequestDisplay.RequestStatusClass(context)">@context</span>
+                </ItemTemplate>
             </TelerikChipList>
         </div>
 
@@ -52,17 +62,17 @@
 
         @if (_loading)
         {
-            <p class="scm3-muted">Loading requests…</p>
+            <p class="text-muted">Loading requests…</p>
         }
         else
         {
             @if (_visibleRequests.Count == 0)
             {
-                <p class="scm3-muted">No requests match the current filters.</p>
+                <p class="text-muted">No requests match the current filters.</p>
             }
             else
             {
-                <div class="scm3-card-list">
+                <div class="card-list">
                     @foreach (var request in _visibleRequests)
                     {
                         <RequestCard Request="@request"
@@ -75,14 +85,14 @@
         }
     </section>
 
-    <section class="scm3-detail-pane">
+    <section class="detail-pane">
         @if (_selected is not null)
         {
             <RequestDetailPanel @key="_selected.RequestId" Request="_selected" OnChanged="ReloadAsync" />
         }
         else
         {
-            <div class="scm3-detail-empty">
+            <div class="detail-empty">
                 <p>Select a request from the list to view its details.</p>
             </div>
         }
@@ -95,9 +105,13 @@
     // in-page chips that can be combined freely: any selected Type OR's together,
     // any selected Status OR's together, and the two groups AND together).
     private static readonly string[] TypeChips =
-        ["System", "Segment", "CSCI GA-ASI", "CSCI Supplier", "EE Request", "TE Request", "Third Party SW"];
+        RequestDisplay.RequestTypes.Select(type => type.Name).ToArray();
 
-    private static readonly string[] StatusChips = ["In Review", "Pending", "Released", "Draft"];
+    private static readonly string[] StatusChips =
+        RequestDisplay.RequestStatuses
+            .Where(status => status.Kind is not RequestStatusKind.Rejected and not RequestStatusKind.Terminated)
+            .Select(status => status.Name)
+            .ToArray();
 
     private List<Request> _allRequests = [];
     private List<Request> _visibleRequests = [];

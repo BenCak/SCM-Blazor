@@ -1,31 +1,76 @@
 @inherits LayoutComponentBase
 @inject ICurrentUserService CurrentUser
+@inject IUserService UserService
+@inject IJSRuntime JS
 
 <TelerikRootComponent>
-<div class="scm3-shell">
-    <header class="scm3-header">
-        <button class="scm3-drawer-toggle" type="button" @onclick="ToggleDrawer"
-                title="@(_expanded ? "Collapse navigation" : "Expand navigation")"
-                aria-label="Toggle navigation">
-            ☰
-        </button>
-        <span class="scm3-brand">SCM3 Portal</span>
-        <div class="scm3-header-spacer"></div>
-        <span class="scm3-bell" title="Notifications" aria-hidden="true">🔔</span>
-        <span class="scm3-user">@(CurrentUser.CurrentUser?.FullName ?? "Guest")</span>
-        <form method="post" action="logout">
-            <button type="submit" class="scm3-logout">Sign Out</button>
-        </form>
-    </header>
+<div class="scm3-app-shell">
+    <TelerikAppBar>
+        <AppBarSection>
+            <TelerikButton OnClick="@ToggleDrawer" Icon="@Telerik.SvgIcons.SvgIcon.Menu"
+                           FillMode="@Telerik.Blazor.ThemeConstants.Button.FillMode.Flat"
+                           title="@(_expanded ? "Collapse navigation" : "Expand navigation")"
+                           AriaLabel="Toggle navigation" />
+        </AppBarSection>
 
-    <div class="scm3-body">
-        <nav class="scm3-drawer @(_expanded ? "scm3-drawer-expanded" : "scm3-drawer-collapsed")">
-            <NavMenu Expanded="_expanded" />
-        </nav>
+        <AppBarSection>
+            <strong>SCM3 Portal</strong>
+        </AppBarSection>
 
-        <main class="scm3-content">
-            @Body
-        </main>
+        <AppBarSpacer />
+
+        <AppBarSection>
+            <TelerikButton Icon="@Telerik.SvgIcons.SvgIcon.Bell"
+                           FillMode="@Telerik.Blazor.ThemeConstants.Button.FillMode.Flat"
+                           title="Notifications" AriaLabel="Notifications">
+                <TelerikBadge Position="@Telerik.Blazor.BadgePosition.Edge"
+                              HorizontalAlign="@Telerik.Blazor.BadgeHorizontalAlign.End"
+                              Size="@Telerik.Blazor.ThemeConstants.Badge.Size.Small"
+                              ThemeColor="@Telerik.Blazor.ThemeConstants.Badge.ThemeColor.Error">
+                </TelerikBadge>
+            </TelerikButton>
+        </AppBarSection>
+
+        <AppBarSection>
+            <label for="theme-selector" class="visually-hidden">Application theme</label>
+            <TelerikDropDownList Data="@ThemeCatalog.Themes"
+                                  Id="theme-selector"
+                                  TItem="ThemeOption" TValue="string"
+                                  TextField="@nameof(ThemeOption.DisplayName)"
+                                  ValueField="@nameof(ThemeOption.Key)"
+                                  Value="@_themeKey"
+                                  ValueChanged="@OnThemeChanged"
+                                  Width="160px" />
+        </AppBarSection>
+
+        <AppBarSection>
+            <span>@(CurrentUser.CurrentUser?.FullName ?? "Guest")</span>
+        </AppBarSection>
+
+        <AppBarSection>
+            <form method="post" action="logout">
+                <TelerikButton ButtonType="@Telerik.Blazor.ButtonType.Submit">Sign Out</TelerikButton>
+            </form>
+        </AppBarSection>
+    </TelerikAppBar>
+
+    <div>
+        @* TItem is unused — NavMenu (TelerikMenu, role-grouped flyout nav) renders via
+           Template instead of Drawer's own Data-bound items; Data/Template must still
+           agree on TItem so an empty placeholder list is supplied. MiniMode/Mode/
+           Expanded still drive the Telerik width-animated collapse. *@
+        <TelerikDrawer Data="@_drawerPlaceholder" TItem="DrawerPlaceholderItem"
+                       MiniMode="true" Mode="@DrawerMode.Push"
+                       @bind-Expanded="_expanded">
+            <Template>
+                <NavMenu Expanded="@_expanded" />
+            </Template>
+            <DrawerContent>
+                <main class="scm3-main-content">
+                    @Body
+                </main>
+            </DrawerContent>
+        </TelerikDrawer>
     </div>
 </div>
 
@@ -38,13 +83,36 @@
 </div>
 
 @code {
-    // Expanded = 200px with labels, collapsed = 50px icons-only (root CLAUDE.md §8).
+    // Expanded = 200px with labels, collapsed = 50px icons-only (root CLAUDE.md §8),
+    // now driven by TelerikDrawer's MiniMode rather than manual width CSS classes.
     private bool _expanded = true;
+
+    private string _themeKey = ThemeCatalog.DefaultThemeKey;
+
+    private sealed class DrawerPlaceholderItem;
+    private readonly List<DrawerPlaceholderItem> _drawerPlaceholder = [];
 
     protected override async Task OnInitializedAsync()
     {
         await CurrentUser.LoadAsync();
+        _themeKey = ThemeCatalog.Resolve(CurrentUser.CurrentUser?.Theme).Key;
     }
 
     private void ToggleDrawer() => _expanded = !_expanded;
+
+    // Live-applies the theme via JS interop (kendo-theme-* swap — root CLAUDE.md §13)
+    // and persists the choice to Users.Theme.
+    private async Task OnThemeChanged(string themeKey)
+    {
+        _themeKey = themeKey;
+        var theme = ThemeCatalog.Resolve(themeKey);
+
+        await JS.InvokeVoidAsync("scm3.applyTheme", theme.CssHref, theme.IsDark);
+
+        if (CurrentUser.CurrentUser is { } user)
+        {
+            user.Theme = theme.Key;
+            await UserService.SaveAsync(user);
+        }
+    }
 }

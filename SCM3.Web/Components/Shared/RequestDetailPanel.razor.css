@@ -1,0 +1,187 @@
+.request-detail-host {
+    position: relative;
+    min-width: 0;
+    min-height: 100%;
+}
+
+.detail-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--kendo-spacing-3, 0.75rem);
+    color: var(--kendo-color-on-app-surface, #212529);
+    font-family: var(--kendo-font-family);
+    font-size: var(--kendo-font-size-md, 0.875rem);
+    line-height: var(--kendo-line-height-md, 1.4285714286);
+}
+
+.detail-header {
+    border-bottom: 1px solid var(--kendo-color-border, #d8dce0);
+    padding-bottom: var(--kendo-spacing-2, 0.5rem);
+}
+
+.detail-title {
+    margin: 0;
+    color: var(--kendo-color-on-app-surface, #212529);
+    font-family: var(--kendo-font-family);
+    font-size: var(--kendo-font-size-xl, 1.25rem);
+    font-weight: var(--kendo-font-weight-semibold, 600);
+    line-height: var(--kendo-line-height-sm, 1.25);
+}
+
+.detail-subtitle {
+    color: var(--kendo-color-subtle, #5a6470);
+    margin-bottom: var(--kendo-spacing-2, 0.5rem);
+    font-size: var(--kendo-font-size-md, 0.875rem);
+}
+
+.detail-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: var(--kendo-spacing-2, 0.5rem) var(--kendo-spacing-4, 1rem);
+    margin: var(--kendo-spacing-2, 0.5rem) 0;
+}
+
+.detail-info-cell {
+    display: flex;
+    flex-direction: column;
+    gap: var(--kendo-spacing-0\.5, 0.125rem);
+}
+
+.detail-info-label {
+    font-size: var(--kendo-font-size-sm, 0.75rem);
+    font-weight: var(--kendo-font-weight-semibold, 600);
+    line-height: var(--kendo-line-height-sm, 1.25);
+    text-transform: uppercase;
+    color: var(--kendo-color-subtle, #5a6470);
+}
+
+.detail-status-row {
+    display: flex;
+    align-items: center;
+    gap: var(--kendo-spacing-4, 1rem);
+    margin-top: var(--kendo-spacing-2, 0.5rem);
+}
+
+.detail-priority {
+    display: flex;
+    align-items: center;
+    gap: var(--kendo-spacing-2, 0.5rem);
+    font-size: var(--kendo-font-size-md, 0.875rem);
+    font-weight: var(--kendo-font-weight-semibold, 600);
+}
+
+.detail-status-message {
+    padding: var(--kendo-spacing-2, 0.5rem) var(--kendo-spacing-3, 0.75rem);
+    border: 1px solid var(--kendo-color-primary-subtle-active, #b6d7ef);
+    border-radius: var(--kendo-border-radius-md, 0.25rem);
+    background: var(--kendo-color-primary-subtle, #e3f2fd);
+    color: var(--kendo-color-primary-on-subtle, #1a5276);
+}
+
+.actions-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--kendo-spacing-2, 0.5rem);
+    flex-wrap: wrap;
+}
+
+.actions-spacer {
+    flex: 1 1 auto;
+}
+
+.detail-section-nav {
+    display: flex;
+    gap: var(--kendo-spacing-4, 1rem);
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--kendo-color-border, #d8dce0);
+    padding-bottom: var(--kendo-spacing-2, 0.5rem);
+}
+
+.detail-section-anchor {
+    scroll-margin-top: var(--kendo-spacing-4, 1rem);
+}
+
+.detail-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: var(--kendo-spacing-2, 0.5rem) var(--kendo-spacing-4, 1rem);
+    margin: var(--kendo-spacing-2, 0.5rem) 0 var(--kendo-spacing-4, 1rem);
+}
+
+.detail-fields > div {
+    display: flex;
+    flex-direction: column;
+    gap: var(--kendo-spacing-0\.5, 0.125rem);
+}
+
+.detail-subsection-title {
+    margin: var(--kendo-spacing-4, 1rem) 0 var(--kendo-spacing-2, 0.5rem);
+    color: var(--kendo-color-on-app-surface, #212529);
+    font-family: var(--kendo-font-family);
+    font-size: var(--kendo-font-size-lg, 1rem);
+    font-weight: var(--kendo-font-weight-semibold, 600);
+    line-height: var(--kendo-line-height-sm, 1.25);
+}
+
+.scm-status-edit {
+    display: flex;
+    flex-direction: column;
+    gap: var(--kendo-spacing-2, 0.5rem);
+    margin-top: var(--kendo-spacing-3, 0.75rem);
+    max-width: 30rem;
+}
+
+.note-composer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--kendo-spacing-2, 0.5rem);
+    align-items: flex-start;
+    margin: var(--kendo-spacing-2, 0.5rem) 0 var(--kendo-spacing-4, 1rem);
+}
+
+.note-item {
+    padding: var(--kendo-spacing-2, 0.5rem) 0;
+    border-bottom: 1px solid var(--kendo-color-border, #d8dce0);
+}
+
+.note-meta {
+    font-size: var(--kendo-font-size-sm, 0.75rem);
+    line-height: var(--kendo-line-height-sm, 1.25);
+    color: var(--kendo-color-subtle, #5a6470);
+}
+
+.right-panel-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: flex-end;
+    background: color-mix(in srgb, var(--kendo-color-black, #000) 20%, transparent);
+}
+
+.drawer-panel {
+    width: min(27.5rem, 100%);
+    height: 100%;
+    overflow-y: auto;
+    padding: var(--kendo-spacing-4, 1rem);
+    color: var(--kendo-color-on-app-surface, #212529);
+    background: var(--kendo-color-app-surface, #fff);
+    border-left: 1px solid var(--kendo-color-border, #d8dce0);
+    box-shadow: var(--kendo-elevation-4, -0.25rem 0 1rem rgb(0 0 0 / 18%));
+}
+
+.drawer-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--kendo-spacing-3, 0.75rem);
+}
+
+.drawer-panel-header h3 {
+    margin: 0;
+    color: var(--kendo-color-on-app-surface, #212529);
+    font-family: var(--kendo-font-family);
+    font-size: var(--kendo-font-size-xl, 1.25rem);
+    font-weight: var(--kendo-font-weight-semibold, 600);
+    line-height: var(--kendo-line-height-sm, 1.25);
+}

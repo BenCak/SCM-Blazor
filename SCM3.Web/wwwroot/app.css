@@ -1,19 +1,109 @@
-html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+/* Application color settings. Change these values to restyle the filter chips. */
+:root {
+    --scm3-type-chip-bg: #e8f2ff;
+    --scm3-type-chip-text: #174f84;
+    --scm3-type-chip-border: #8ebce6;
+    --scm3-type-chip-selected-bg: #1976b8;
+    --scm3-type-chip-selected-text: #ffffff;
+
+    /* Request type colors used by both filter chips and request-card badges. */
+    --scm3-type-system: #c62828;
+    --scm3-type-segment: #6a1b9a;
+    --scm3-type-csci-gaasi: #1565c0;
+    --scm3-type-csci-supplier: #00695c;
+    --scm3-type-ee: #ef6c00;
+    --scm3-type-te: #2e7d32;
+    --scm3-type-third-party: #455a64;
+    --scm3-type-unknown: #616161;
+
+    /* Request status colors used by filters, cards, and the detail header. */
+    --scm3-status-draft: #616161;
+    --scm3-status-pending: #ef8f00;
+    --scm3-status-in-review: #1976d2;
+    --scm3-status-released: #2e7d32;
+    --scm3-status-rejected: #c62828;
+    --scm3-status-terminated: #6d1b1b;
+    --scm3-status-unknown: #616161;
+}
+
+.request-status-chip {
+    --request-status-color: var(--scm3-status-unknown);
+    color: var(--request-status-color) !important;
+    background: color-mix(in srgb, var(--request-status-color) 12%, var(--kendo-color-app-surface, #fff)) !important;
+    border-color: color-mix(in srgb, var(--request-status-color) 60%, transparent) !important;
+}
+
+.request-status-in-review {
+    --request-status-color: var(--scm3-status-in-review);
+}
+
+.request-status-pending {
+    --request-status-color: var(--scm3-status-pending);
+}
+
+.request-status-released {
+    --request-status-color: var(--scm3-status-released);
+}
+
+.request-status-draft {
+    --request-status-color: var(--scm3-status-draft);
+}
+
+.request-status-rejected {
+    --request-status-color: var(--scm3-status-rejected);
+}
+
+.request-status-terminated {
+    --request-status-color: var(--scm3-status-terminated);
+}
+
+html,
+body {
+    min-height: 100%;
+    font-family: var(--kendo-font-family-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif);
+    font-size: var(--kendo-font-size, 0.875rem);
+    line-height: var(--kendo-line-height, 1.4285714286);
+    color: var(--kendo-color-on-app-surface, #212529);
+    background: var(--kendo-color-surface, #f5f5f5);
+}
+
+body {
+    margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+.scm3-app-shell {
+    min-height: 100vh;
+    color: var(--kendo-color-on-app-surface, #212529);
+    background: var(--kendo-color-surface, #f5f5f5);
+}
+
+.scm3-main-content {
+    min-width: 0;
+    min-height: calc(100vh - 3rem);
+    padding: 0.75rem;
+    background: var(--kendo-color-surface, #f5f5f5);
 }
 
 a, .btn-link {
-    color: #006bb7;
+    color: var(--kendo-color-primary-on-surface, #006bb7);
 }
 
 .btn-primary {
-    color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
+    color: var(--kendo-color-on-primary, #fff);
+    background-color: var(--kendo-color-primary, #1b6ec2);
+    border-color: var(--kendo-color-primary, #1861ac);
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+  box-shadow: 0 0 0 0.1rem var(--kendo-color-app-surface, #fff),
+              0 0 0 0.25rem color-mix(in srgb, var(--kendo-color-primary, #258cfb) 55%, transparent);
 }
 
 .content {
@@ -25,15 +115,15 @@ h1:focus {
 }
 
 .valid.modified:not([type=checkbox]) {
-    outline: 1px solid #26b050;
+    outline: 1px solid var(--kendo-color-success, #26b050);
 }
 
 .invalid {
-    outline: 1px solid #e50000;
+    outline: 1px solid var(--kendo-color-error, #e50000);
 }
 
 .validation-message {
-    color: #e50000;
+    color: var(--kendo-color-error-on-surface, var(--kendo-color-error, #e50000));
 }
 
 .blazor-error-boundary {
@@ -46,8 +136,29 @@ h1:focus {
         content: "An error has occurred."
     }
 
+#blazor-error-ui {
+    color: var(--kendo-color-warning-on-subtle, #3d2e00);
+    background: var(--kendo-color-warning-subtle, lightyellow);
+    border-top: 1px solid var(--kendo-color-warning, #e6b800);
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+    #blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: 0.75rem;
+        top: 0.5rem;
+    }
+
 .darker-border-checkbox.form-check-input {
-    border-color: #929292;
+    border-color: var(--kendo-color-border-alt, #929292);
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {

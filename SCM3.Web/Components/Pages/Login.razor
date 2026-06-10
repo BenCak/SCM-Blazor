@@ -3,13 +3,13 @@
 
 <PageTitle>Sign In · SCM3 Portal</PageTitle>
 
-<div class="scm3-login-card">
+<div class="login-card">
     <h1>SCM3 Portal</h1>
-    <p class="scm3-login-subtitle">General Atomics Aeronautical Systems — Software Configuration Management</p>
+    <p class="login-subtitle">General Atomics Aeronautical Systems — Software Configuration Management</p>
 
     @if (ErrorFlag == "1")
     {
-        <p class="scm3-login-error">Invalid username or password.</p>
+        <p class="login-error">Invalid username or password.</p>
     }
 
     @* Plain HTML form posting to the minimal-API /login endpoint in Program.cs — sign-in
@@ -18,7 +18,7 @@
        hidden field so the [FromForm]-bound endpoint can validate it; unlike manually calling
        IAntiforgery.GetAndStoreTokens(HttpContext), it survives the prerender → interactive
        circuit transition (HttpContext is only cascaded during prerendering). *@
-    <form method="post" action="login" class="scm3-login-form">
+    <form method="post" action="login" class="login-form">
         <AntiforgeryToken />
         <input type="hidden" name="returnUrl" value="@ReturnUrl" />
         <label>
@@ -32,7 +32,7 @@
         <button type="submit">Sign In</button>
     </form>
 
-    <div class="scm3-login-demo">
+    <div class="login-demo">
         <p>Demo accounts — password is <code>test</code> for all:</p>
         <ul>
             <li><code>user</code> — Viewer</li>

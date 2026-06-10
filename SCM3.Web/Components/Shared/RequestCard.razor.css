@@ -1,0 +1,93 @@
+.request-card {
+    display: block;
+    width: 100%;
+    font: inherit;
+    color: var(--kendo-color-on-app-surface, #212529);
+    text-align: left;
+    background: var(--kendo-color-surface-alt, #fff);
+    border: 1px solid var(--kendo-color-border, #d8dce0);
+    border-radius: 0.25rem;
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+}
+
+.request-card-selected {
+    border-color: var(--kendo-color-primary, #1a5276);
+    box-shadow: 0 0 0 1px var(--kendo-color-primary, #1a5276);
+}
+
+.request-card-row1 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+}
+
+.request-card-title-group {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.request-type-badge {
+    --request-type-color: var(--scm3-type-unknown);
+    display: inline-flex;
+    flex: 0 0 2rem;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--request-type-color) 55%, transparent);
+    color: var(--request-type-color);
+    background: color-mix(in srgb, var(--request-type-color) 12%, var(--kendo-color-app-surface, #fff));
+    font-size: 0.625rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+
+.request-type-system {
+    --request-type-color: var(--scm3-type-system);
+}
+
+.request-type-segment {
+    --request-type-color: var(--scm3-type-segment);
+}
+
+.request-type-csci-gaasi {
+    --request-type-color: var(--scm3-type-csci-gaasi);
+}
+
+.request-type-csci-supplier {
+    --request-type-color: var(--scm3-type-csci-supplier);
+}
+
+.request-type-ee {
+    --request-type-color: var(--scm3-type-ee);
+}
+
+.request-type-te {
+    --request-type-color: var(--scm3-type-te);
+}
+
+.request-type-third-party {
+    --request-type-color: var(--scm3-type-third-party);
+}
+
+.request-card-row2 {
+    margin-top: 0.25rem;
+    font-size: 0.85rem;
+    color: var(--kendo-color-subtle, #5a6470);
+}
+
+.request-card-row3 {
+    margin-top: 0.25rem;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--kendo-color-subtle, #5a6470);
+}

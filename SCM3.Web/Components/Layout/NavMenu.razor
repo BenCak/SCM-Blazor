@@ -1,32 +1,52 @@
 @inject ICurrentUserService CurrentUser
-@inject NavigationManager Navigation
 
-@* Role-driven sidebar nav, rendered as a single data-bound, vertically-oriented
-   TelerikMenu (root CLAUDE.md §8 drawer). TelerikMenu is a flyout/popup-style menu —
-   group headers (Release Artifacts, Viewer Tools, SCM DB Manager, Admin) open their
-   children in a popup on click rather than showing them inline at all times; this
-   trade-off vs. an always-expanded tree was confirmed with the user before converting
-   from the old <SCM3NavLink>-based always-visible nested links. _items is rebuilt from
-   ICurrentUserService.IsInRole(...) checks — same role gating as before (no grayed-out
-   items), just centralized in code instead of scattered @if blocks in markup. *@
-<div class="scm3-nav">
-    <TelerikMenu TItem="NavMenuItem"
-                 Data="@_items"
-                 Orientation="@Telerik.Blazor.MenuOrientation.Vertical"
-                 ItemsField="@nameof(NavMenuItem.Items)"
-                 TextField="@nameof(NavMenuItem.Text)"
-                 OnClick="@OnItemClick"
-                 OnItemRender="@OnItemRender">
-        <ItemTemplate Context="item">
-            @{ var navItem = (NavMenuItem)item; }
-            <span class="scm3-nav-icon" aria-hidden="true">@navItem.Icon</span>
-            @if (Expanded)
+@* Inline accordion navigation: section children expand downward inside the drawer
+   instead of opening in TelerikMenu's side-facing popup. *@
+<nav class="scm3-nav" aria-label="Main navigation">
+    @foreach (var item in _items)
+    {
+        var isOpen = _openSections.Contains(item.Text);
+        var sectionId = $"nav-section-{item.Text.Replace(" ", "-", StringComparison.Ordinal).ToLowerInvariant()}";
+
+        <div class="scm3-nav-section">
+            <button type="button"
+                    class="scm3-nav-row scm3-nav-section-button"
+                    title="@(!Expanded ? item.Text : null)"
+                    aria-expanded="@isOpen"
+                    aria-controls="@sectionId"
+                    @onclick="() => ToggleSection(item.Text)">
+                <span class="scm3-nav-icon" aria-hidden="true">
+                    <TelerikSvgIcon Icon="@item.Icon" />
+                </span>
+                <span class="@(!Expanded ? "visually-hidden" : "scm3-nav-label")">@item.Text</span>
+                @if (Expanded)
+                {
+                    <span class="scm3-nav-chevron" aria-hidden="true">
+                        <TelerikSvgIcon Icon="@(isOpen ? Telerik.SvgIcons.SvgIcon.ChevronUp : Telerik.SvgIcons.SvgIcon.ChevronDown)" />
+                    </span>
+                }
+            </button>
+
+            @if (isOpen && item.Items is not null)
             {
-                <span class="scm3-nav-label">@navItem.Text</span>
+                <div id="@sectionId" class="scm3-nav-children">
+                    @foreach (var child in item.Items)
+                    {
+                        <NavLink href="@child.Url"
+                                 class="scm3-nav-row scm3-nav-link"
+                                 Match="@NavLinkMatch.All"
+                                 title="@(!Expanded ? child.Text : null)">
+                            <span class="scm3-nav-icon" aria-hidden="true">
+                                <TelerikSvgIcon Icon="@child.Icon" />
+                            </span>
+                            <span class="@(!Expanded ? "visually-hidden" : "scm3-nav-label")">@child.Text</span>
+                        </NavLink>
+                    }
+                </div>
             }
-        </ItemTemplate>
-    </TelerikMenu>
-</div>
+        </div>
+    }
+</nav>
 
 @code {
     // Drives icon-only (collapsed, 50px) vs icon+label (expanded, 200px) display —
@@ -37,12 +57,13 @@
     private sealed class NavMenuItem
     {
         public string Text { get; set; } = string.Empty;
-        public string Icon { get; set; } = string.Empty;
+        public Telerik.SvgIcons.ISvgIcon Icon { get; set; } = Telerik.SvgIcons.SvgIcon.Circle;
         public string? Url { get; set; }
         public List<NavMenuItem>? Items { get; set; }
     }
 
     private List<NavMenuItem> _items = [];
+    private readonly HashSet<string> _openSections = ["Release Artifacts"];
 
     // MainLayout also calls LoadAsync, but its completion doesn't trigger a re-render
     // here (NavMenu's parameters haven't changed) — load independently so role checks
@@ -61,27 +82,27 @@
         var releaseArtifacts = new NavMenuItem
         {
             Text = "Release Artifacts",
-            Icon = "📋",
+            Icon = Telerik.SvgIcons.SvgIcon.Clipboard,
             Items =
             [
-                new NavMenuItem { Text = "All Requests", Icon = "📋", Url = "/requests" }
+                new NavMenuItem { Text = "All Requests", Icon = Telerik.SvgIcons.SvgIcon.ListUnordered, Url = "/requests" }
             ]
         };
 
         var viewerTools = new NavMenuItem
         {
             Text = "Viewer Tools",
-            Icon = "🔧",
+            Icon = Telerik.SvgIcons.SvgIcon.Wrench,
             Items =
             [
-                new NavMenuItem { Text = "Lineage Tree", Icon = "🌳", Url = "/tools/lineage-tree" },
-                new NavMenuItem { Text = "Release Documents", Icon = "📄", Url = "/tools/release-documents" }
+                new NavMenuItem { Text = "Lineage Tree", Icon = Telerik.SvgIcons.SvgIcon.Graph, Url = "/tools/lineage-tree" },
+                new NavMenuItem { Text = "Release Documents", Icon = Telerik.SvgIcons.SvgIcon.File, Url = "/tools/release-documents" }
             ]
         };
         if (isScm)
         {
-            viewerTools.Items!.Add(new NavMenuItem { Text = "Release Tools", Icon = "🚀", Url = "/tools/release-tools" });
-            viewerTools.Items!.Add(new NavMenuItem { Text = "Compare Tools", Icon = "🔍", Url = "/tools/compare-tools" });
+            viewerTools.Items!.Add(new NavMenuItem { Text = "Release Tools", Icon = Telerik.SvgIcons.SvgIcon.Launch, Url = "/tools/release-tools" });
+            viewerTools.Items!.Add(new NavMenuItem { Text = "Compare Tools", Icon = Telerik.SvgIcons.SvgIcon.Search, Url = "/tools/compare-tools" });
         }
 
         var items = new List<NavMenuItem> { releaseArtifacts, viewerTools };
@@ -91,16 +112,16 @@
             items.Add(new NavMenuItem
             {
                 Text = "SCM DB Manager",
-                Icon = "🗄️",
+                Icon = Telerik.SvgIcons.SvgIcon.Data,
                 Items =
                 [
-                    new NavMenuItem { Text = "Customers", Icon = "🏢", Url = "/admin/db/customers" },
-                    new NavMenuItem { Text = "Products", Icon = "📦", Url = "/admin/db/products" },
-                    new NavMenuItem { Text = "Systems", Icon = "🖧", Url = "/admin/db/systems" },
-                    new NavMenuItem { Text = "CSCI Names", Icon = "🧩", Url = "/admin/db/csci-names" },
-                    new NavMenuItem { Text = "Segment Names", Icon = "🔗", Url = "/admin/db/segment-names" },
-                    new NavMenuItem { Text = "Manufacturers", Icon = "🏭", Url = "/admin/db/manufacturers" },
-                    new NavMenuItem { Text = "Units", Icon = "📐", Url = "/admin/db/units" }
+                    new NavMenuItem { Text = "Customers", Icon = Telerik.SvgIcons.SvgIcon.Buildings, Url = "/admin/db/customers" },
+                    new NavMenuItem { Text = "Products", Icon = Telerik.SvgIcons.SvgIcon.Cube, Url = "/admin/db/products" },
+                    new NavMenuItem { Text = "Systems", Icon = Telerik.SvgIcons.SvgIcon.Devices, Url = "/admin/db/systems" },
+                    new NavMenuItem { Text = "CSCI Names", Icon = Telerik.SvgIcons.SvgIcon.PuzzlePiece, Url = "/admin/db/csci-names" },
+                    new NavMenuItem { Text = "Segment Names", Icon = Telerik.SvgIcons.SvgIcon.Link, Url = "/admin/db/segment-names" },
+                    new NavMenuItem { Text = "Manufacturers", Icon = Telerik.SvgIcons.SvgIcon.IndustrialVehicle, Url = "/admin/db/manufacturers" },
+                    new NavMenuItem { Text = "Units", Icon = Telerik.SvgIcons.SvgIcon.Ruler, Url = "/admin/db/units" }
                 ]
             });
         }
@@ -110,12 +131,12 @@
             items.Add(new NavMenuItem
             {
                 Text = "Admin",
-                Icon = "⚙️",
+                Icon = Telerik.SvgIcons.SvgIcon.Gear,
                 Items =
                 [
-                    new NavMenuItem { Text = "Manage Users", Icon = "👤", Url = "/admin/users" },
-                    new NavMenuItem { Text = "Roles & Permissions", Icon = "🔐", Url = "/admin/roles" },
-                    new NavMenuItem { Text = "Settings", Icon = "⚙️", Url = "/admin/settings" }
+                    new NavMenuItem { Text = "Manage Users", Icon = Telerik.SvgIcons.SvgIcon.Users, Url = "/admin/users" },
+                    new NavMenuItem { Text = "Roles & Permissions", Icon = Telerik.SvgIcons.SvgIcon.SecurityLock, Url = "/admin/roles" },
+                    new NavMenuItem { Text = "Settings", Icon = Telerik.SvgIcons.SvgIcon.Sliders, Url = "/admin/settings" }
                 ]
             });
         }
@@ -123,19 +144,11 @@
         return items;
     }
 
-    private void OnItemClick(NavMenuItem item)
+    private void ToggleSection(string section)
     {
-        if (item.Url is not null)
+        if (!_openSections.Add(section))
         {
-            Navigation.NavigateTo(item.Url);
+            _openSections.Remove(section);
         }
-    }
-
-    private void OnItemRender(MenuItemRenderEventArgs args)
-    {
-        var isActive = args.Item is NavMenuItem { Url: not null } navItem
-            && Navigation.ToBaseRelativePath(Navigation.Uri).Equals(navItem.Url!.TrimStart('/'), StringComparison.OrdinalIgnoreCase);
-
-        args.Class = isActive ? "scm3-nav-link active" : "scm3-nav-link";
     }
 }

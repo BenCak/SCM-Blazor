@@ -1,0 +1,97 @@
+html[data-scm3-theme="dark"] {
+    color-scheme: dark;
+
+    --kendo-color-app-surface: #17191d;
+    --kendo-color-on-app-surface: #f1f3f5;
+    --kendo-color-subtle: #aeb5bd;
+    --kendo-color-surface: #111317;
+    --kendo-color-surface-alt: #202329;
+    --kendo-color-border: rgb(255 255 255 / 14%);
+    --kendo-color-border-alt: rgb(255 255 255 / 24%);
+
+    --kendo-color-base-subtle: #292d34;
+    --kendo-color-base-subtle-hover: #323740;
+    --kendo-color-base-subtle-active: #3b414b;
+    --kendo-color-base: #262a31;
+    --kendo-color-base-hover: #30353d;
+    --kendo-color-base-active: #3a404a;
+    --kendo-color-base-emphasis: #555d69;
+    --kendo-color-base-on-subtle: #f1f3f5;
+    --kendo-color-on-base: #f1f3f5;
+    --kendo-color-base-on-surface: #f1f3f5;
+
+    --kendo-color-primary-subtle: #173450;
+    --kendo-color-primary-subtle-hover: #1d4265;
+    --kendo-color-primary-subtle-active: #24517a;
+    --kendo-color-primary: #66b8f0;
+    --kendo-color-primary-hover: #82c6f4;
+    --kendo-color-primary-active: #4aa8e8;
+    --kendo-color-primary-emphasis: #9bd2f7;
+    --kendo-color-primary-on-subtle: #d9efff;
+    --kendo-color-on-primary: #07131c;
+    --kendo-color-primary-on-surface: #8acbf6;
+
+    --kendo-color-secondary-subtle: #30343b;
+    --kendo-color-secondary: #aeb5bd;
+    --kendo-color-secondary-hover: #c0c6cc;
+    --kendo-color-secondary-active: #969ea7;
+    --kendo-color-secondary-on-subtle: #f1f3f5;
+    --kendo-color-on-secondary: #111317;
+    --kendo-color-secondary-on-surface: #c8cdd2;
+
+    --kendo-color-info-subtle: #162f52;
+    --kendo-color-info: #74aef7;
+    --kendo-color-info-on-subtle: #dbeaff;
+    --kendo-color-info-on-surface: #8cbcf8;
+    --kendo-color-success-subtle: #173b28;
+    --kendo-color-success: #67c587;
+    --kendo-color-success-on-subtle: #d8f5e2;
+    --kendo-color-success-on-surface: #7dd399;
+    --kendo-color-warning-subtle: #493714;
+    --kendo-color-warning: #f5bd52;
+    --kendo-color-warning-on-subtle: #fff0c9;
+    --kendo-color-warning-on-surface: #f8ca70;
+    --kendo-color-error-subtle: #4a2024;
+    --kendo-color-error: #f0787f;
+    --kendo-color-error-on-subtle: #ffe0e2;
+    --kendo-color-error-on-surface: #f58e94;
+
+    --scm3-type-system: #ff8585;
+    --scm3-type-segment: #d99bff;
+    --scm3-type-csci-gaasi: #82b7ff;
+    --scm3-type-csci-supplier: #65d5c4;
+    --scm3-type-ee: #ffb066;
+    --scm3-type-te: #83d58b;
+    --scm3-type-third-party: #b3c2cc;
+    --scm3-type-unknown: #b7bdc4;
+
+    --scm3-status-draft: #b7bdc4;
+    --scm3-status-pending: #ffc05c;
+    --scm3-status-in-review: #7db8ff;
+    --scm3-status-released: #7bd18a;
+    --scm3-status-rejected: #ff8585;
+    --scm3-status-terminated: #ff9b9b;
+    --scm3-status-unknown: #b7bdc4;
+}
+
+html[data-scm3-theme="dark"] body,
+html[data-scm3-theme="dark"] h1,
+html[data-scm3-theme="dark"] h2,
+html[data-scm3-theme="dark"] h3,
+html[data-scm3-theme="dark"] h4,
+html[data-scm3-theme="dark"] h5,
+html[data-scm3-theme="dark"] h6 {
+    color: var(--kendo-color-on-app-surface);
+}
+
+html[data-scm3-theme="dark"] a {
+    color: var(--kendo-color-primary);
+}
+
+html[data-scm3-theme="dark"] a:hover {
+    color: var(--kendo-color-primary-hover);
+}
+
+html[data-scm3-theme="dark"] .text-muted {
+    color: var(--kendo-color-subtle) !important;
+}

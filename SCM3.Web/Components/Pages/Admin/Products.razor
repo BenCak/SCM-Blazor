@@ -8,18 +8,18 @@
 *@
 <PageTitle>Products · SCM3 Portal</PageTitle>
 
-<div class="scm3-admin-page">
+<div class="p-3">
     <h1>Products</h1>
-    <p class="scm3-muted">Reference data used when composing Systems (Customer + Product).</p>
+    <p class="text-muted">Reference data used when composing Systems (Customer + Product).</p>
 
     @if (_statusMessage is not null)
     {
-        <p class="scm3-detail-status-message">@_statusMessage</p>
+        <p class="alert alert-info">@_statusMessage</p>
     }
 
     @if (_loading)
     {
-        <p class="scm3-muted">Loading products…</p>
+        <p class="text-muted">Loading products…</p>
     }
     else
     {

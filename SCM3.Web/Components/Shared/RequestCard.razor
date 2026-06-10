@@ -1,21 +1,29 @@
+@{
+    var requestType = RequestDisplay.RequestType(Request.RequestType?.Name);
+}
+
 @* List item card for the master-detail dashboard (root CLAUDE.md §7):
      Request Name v4.2                       [In Review]
      System · ID 3001 · Parent — · Requestor John Smith
      2026-05-25                              💬 4
-   No type icon (LHS-feedback redesign, 2026-06-07) — the type name in row 2 already
-   identifies it, and chips now carry the type filtering that icons used to hint at. *@
-<button type="button" class="scm3-request-card @(Selected ? "scm3-request-card-selected" : "")" @onclick="() => OnSelect.InvokeAsync(Request.RequestId)">
-    <div class="scm3-request-card-row1">
-        <span class="scm3-request-card-title">@Request.Title @Request.Version</span>
+   The enum-backed type badge uses the same color mapping as the Type filter chips. *@
+<button type="button" class="request-card @(Selected ? "request-card-selected" : "")" @onclick="() => OnSelect.InvokeAsync(Request.RequestId)">
+    <div class="request-card-row1">
+        <span class="request-card-title-group">
+            <span class="request-type-badge @RequestDisplay.RequestTypeClass(Request.RequestType?.Name)"
+                  title="@requestType.Name"
+                  aria-label="@requestType.Name">@requestType.Abbreviation</span>
+            <span class="request-card-title">@Request.Title @Request.Version</span>
+        </span>
         <TelerikChip Text="@(Request.RequestStatus?.Name ?? "—")"
-                     ThemeColor="@RequestDisplay.StatusThemeColor(Request.RequestStatus?.Name)" />
+                     Class="@RequestDisplay.RequestStatusClass(Request.RequestStatus?.Name)" />
     </div>
-    <div class="scm3-request-card-row2">
+    <div class="request-card-row2">
         @Request.RequestType?.Name · ID @Request.RequestId · Parent @(Request.ParentRequest?.Title ?? "—") · Requestor @(Request.Requestor?.FullName ?? "—")
     </div>
-    <div class="scm3-request-card-row3">
+    <div class="request-card-row3">
         <span>@Request.LogDate.ToString("yyyy-MM-dd")</span>
-        <span class="scm3-request-card-notes">💬 @NoteCount</span>
+        <span class="request-card-notes">💬 @NoteCount</span>
     </div>
 </button>
 

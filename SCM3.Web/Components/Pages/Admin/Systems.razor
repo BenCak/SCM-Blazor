@@ -12,22 +12,22 @@
 *@
 <PageTitle>Systems · SCM3 Portal</PageTitle>
 
-<div class="scm3-admin-page">
+<div class="p-3">
     <h1>Systems</h1>
-    <p class="scm3-muted">Customer + Product combinations that top the release hierarchy (e.g. "Army Gray Eagle").</p>
+    <p class="text-muted">Customer + Product combinations that top the release hierarchy (e.g. "Army Gray Eagle").</p>
 
     @if (_statusMessage is not null)
     {
-        <p class="scm3-detail-status-message">@_statusMessage</p>
+        <p class="alert alert-info">@_statusMessage</p>
     }
 
     @if (_loading)
     {
-        <p class="scm3-muted">Loading systems…</p>
+        <p class="text-muted">Loading systems…</p>
     }
     else if (_customers.Count == 0 || _products.Count == 0)
     {
-        <p class="scm3-muted">Add at least one Customer and Product before creating a System.</p>
+        <p class="text-muted">Add at least one Customer and Product before creating a System.</p>
     }
     else
     {

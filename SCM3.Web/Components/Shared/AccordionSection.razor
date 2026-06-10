@@ -3,13 +3,15 @@
    "Collapse All" controls work. Id renders as the outer element's id, giving the
    anchor-link section nav above a scroll target (LHS-feedback redesign, 2026-06-07 —
    replaced the old tab strip that switched between hidden tab panes). *@
-<div id="@Id" class="scm3-accordion-section">
-    <button type="button" class="scm3-accordion-header" @onclick="() => OnToggle.InvokeAsync()">
-        <span class="scm3-accordion-caret">@(Expanded ? "▼" : "▶")</span> @Title
-    </button>
+<div id="@Id">
+    <TelerikButton FillMode="@Telerik.Blazor.ThemeConstants.Button.FillMode.Flat"
+                   Icon="@(Expanded ? Telerik.SvgIcons.SvgIcon.ChevronDown : Telerik.SvgIcons.SvgIcon.ChevronRight)"
+                   OnClick="@(() => OnToggle.InvokeAsync())">
+        @Title
+    </TelerikButton>
     @if (Expanded)
     {
-        <div class="scm3-accordion-body">@ChildContent</div>
+        <div>@ChildContent</div>
     }
 </div>
 

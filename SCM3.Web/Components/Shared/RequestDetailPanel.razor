@@ -4,8 +4,8 @@
     accordion sections (Release Information, Relationships, Attachments, SCM Status,
     Audit Log — each a top-level CollapsibleSection so users see/expand them on one
     scrollable page instead of switching tabs, per the "tabs hide information, accordions
-    reveal information" redesign brief, 2026-06-08), and TelerikDrawer for the RHS
-    History / Change Log slide-in panels. All list/tabular data uses TelerikGrid; list
+    reveal information" redesign brief, 2026-06-08), and a component-local overlay for
+    the RHS History / Change Log panels. All list/tabular data uses TelerikGrid; list
     displays use TelerikListView; the five top-level sections — and ONLY the top level —
     use CollapsibleSection (data-bound TelerikPanelBar wrapper; see that component for why
     declarative <PanelBarItem><ChildContent> markup doesn't work against Telerik 14.0.0).
@@ -26,30 +26,25 @@
 @inject ICurrentUserService CurrentUser
 @inject IJSRuntime JS
 
-<TelerikDrawer TItem="string"
-               @bind-Expanded="@_showRightPanel"
-               Position="DrawerPosition.End"
-               Mode="DrawerMode.Overlay"
-               Width="440px">
-    <DrawerContent>
-        <div class="scm3-detail-panel">
+<div class="request-detail-host">
+    <div class="detail-panel">
 
             @* ── Header strip ─────────────────────────────────────── *@
-            <div class="scm3-detail-header">
-                <h2 class="scm3-detail-title">@Request.Title @Request.Version</h2>
-                <div class="scm3-detail-subtitle">@Request.RequestType?.Name · ID @Request.RequestId · Version @(Request.Version ?? "—")</div>
+            <div class="detail-header">
+                <h2 class="detail-title">@Request.Title @Request.Version</h2>
+                <div class="detail-subtitle">@Request.RequestType?.Name · ID @Request.RequestId · Version @(Request.Version ?? "—")</div>
 
-                <div class="scm3-detail-info-grid">
-                    <div class="scm3-detail-info-cell">
-                        <span class="scm3-detail-info-label">Requestor</span>
+                <div class="detail-info-grid">
+                    <div class="detail-info-cell">
+                        <span class="detail-info-label">Requestor</span>
                         <span>@(Request.Requestor?.FullName ?? "—")</span>
                     </div>
-                    <div class="scm3-detail-info-cell">
-                        <span class="scm3-detail-info-label">Email</span>
+                    <div class="detail-info-cell">
+                        <span class="detail-info-label">Email</span>
                         <span>@(Request.Requestor?.Email ?? "—")</span>
                     </div>
-                    <div class="scm3-detail-info-cell">
-                        <span class="scm3-detail-info-label">Charge #</span>
+                    <div class="detail-info-cell">
+                        <span class="detail-info-label">Charge #</span>
                         @if (ShowSave)
                         {
                             <TelerikTextBox @bind-Value="_editChargeNumber" Placeholder="—" Width="150px" />
@@ -59,16 +54,16 @@
                             <span>@(Request.ChargeNumber ?? "—")</span>
                         }
                     </div>
-                    <div class="scm3-detail-info-cell">
-                        <span class="scm3-detail-info-label">Date</span>
+                    <div class="detail-info-cell">
+                        <span class="detail-info-label">Date</span>
                         <span>@Request.LogDate.ToString("yyyy-MM-dd")</span>
                     </div>
                 </div>
 
-                <div class="scm3-detail-status-row">
+                <div class="detail-status-row">
                     <TelerikChip Text="@($"STATUS: {Request.RequestStatus?.Name ?? "—"}")"
-                                 ThemeColor="@RequestDisplay.StatusThemeColor(Request.RequestStatus?.Name)" />
-                    <span class="scm3-detail-priority">
+                                 Class="@RequestDisplay.RequestStatusClass(Request.RequestStatus?.Name)" />
+                    <span class="detail-priority">
                         PRIORITY:
                         @if (ShowSave)
                         {
@@ -87,11 +82,11 @@
 
             @if (_statusMessage is not null)
             {
-                <div class="scm3-detail-status-message">@_statusMessage</div>
+                <div class="detail-status-message">@_statusMessage</div>
             }
 
             @* ── Actions bar ──────────────────────────────────────── *@
-            <div class="scm3-actions-bar">
+            <div class="actions-bar">
                 @if (ShowSave)
                 {
                     <TelerikButton Enabled="@(!_busy)" OnClick="SaveAsync">Save</TelerikButton>
@@ -121,7 +116,7 @@
                     <TelerikButton Enabled="@(!_busy)" OnClick="ReopenAsync">Reopen</TelerikButton>
                 }
 
-                <span class="scm3-actions-spacer"></span>
+                <span class="actions-spacer"></span>
 
                 <TelerikButton Title="History" OnClick="ShowHistory">🕐</TelerikButton>
                 @if (CurrentUser.IsInRole("SCM_Staff", "SCM_Admin"))
@@ -143,7 +138,7 @@
                `closest("[data-enhance-nav]")` and skips interception entirely for
                this subtree, so only our @onclick (which prevents default and scrolls
                via JS interop) runs. ─────────────────────────────────────────────── *@
-            <nav class="scm3-detail-section-nav" data-enhance-nav="false">
+            <nav class="detail-section-nav" data-enhance-nav="false">
                 <a href="#section-release-info" @onclick="@(() => ScrollToSectionAsync("section-release-info"))" @onclick:preventDefault="true">Release Information</a>
                 <a href="#section-relationships" @onclick="@(() => ScrollToSectionAsync("section-relationships"))" @onclick:preventDefault="true">Relationships</a>
                 <a href="#section-attachments" @onclick="@(() => ScrollToSectionAsync("section-attachments"))" @onclick:preventDefault="true">Attachments (@_attachments.Count)</a>
@@ -152,12 +147,12 @@
             </nav>
 
             @* ── Section 1 — Release Information ──────────────────── *@
-            <div id="section-release-info" class="scm3-detail-section-anchor">
+            <div id="section-release-info" class="detail-section-anchor">
                 <CollapsibleSection Title="@ReleaseInformationTitle" Expanded="true">
                     @switch (Request.RequestType?.Name)
                     {
                         case "System":
-                            <div class="scm3-detail-fields">
+                            <div class="detail-fields">
                                 @FieldDiv("Request ID", Request.RequestId.ToString())
                                 @FieldDiv("Customer", Request.System?.Customer?.Name)
                                 @FieldDiv("Product", Request.System?.Product?.Name)
@@ -172,8 +167,8 @@
                                 @FieldDiv("Release Description", Request.ReleaseDescription)
                                 @FieldDiv("Notes To SCM", Request.NotesToScm)
                             </div>
-                            <h4 class="scm3-detail-subsection-title">Requestor Information</h4>
-                            <div class="scm3-detail-fields">
+                            <h4 class="detail-subsection-title">Requestor Information</h4>
+                            <div class="detail-fields">
                                 @FieldDiv("Requestor Name", Request.RequestorName ?? Request.Requestor?.FullName)
                                 @FieldDiv("Requestor Email", Request.RequestorEmail ?? Request.Requestor?.Email)
                                 @FieldDiv("Requestor Phone", Request.RequestorPhone)
@@ -182,7 +177,7 @@
                             break;
 
                         case "Segment":
-                            <div class="scm3-detail-fields">
+                            <div class="detail-fields">
                                 @FieldDiv("Request ID", Request.RequestId.ToString())
                                 @FieldDiv("Name", Request.Title)
                                 @FieldDiv("Version", Request.Version)
@@ -196,7 +191,7 @@
                             break;
 
                         case "CSCI GA-ASI":
-                            <div class="scm3-detail-fields">
+                            <div class="detail-fields">
                                 @FieldDiv("Request ID", Request.RequestId.ToString())
                                 @FieldDiv("Submission Date", FormatDate(Request.SubmittedDate))
                                 @FieldDiv("Release Date", FormatDate(Request.ReleaseDate))
@@ -207,7 +202,7 @@
                                 @FieldDiv("Notes To SCM", Request.NotesToScm)
                                 @FieldDiv("CSCI Only Release", _asiCsciAttrs is null ? null : YesNo(_asiCsciAttrs.CsciOnlyRelease))
                             </div>
-                            <h4 class="scm3-detail-subsection-title">DCNs</h4>
+                            <h4 class="detail-subsection-title">DCNs</h4>
                             <TelerikGrid Data="@(_asiCsciAttrs?.Dcns ?? [])">
                                 <GridColumns>
                                     <GridColumn Field="@nameof(AsiCsciReleaseAttributes.DcnEntry.DcnNumber)" Title="DCN Number" />
@@ -218,7 +213,7 @@
                             break;
 
                         case "CSCI Supplier":
-                            <div class="scm3-detail-fields">
+                            <div class="detail-fields">
                                 @FieldDiv("Request ID", Request.RequestId.ToString())
                                 @FieldDiv("Submission Date", FormatDate(Request.SubmittedDate))
                                 @FieldDiv("Release Date", FormatDate(Request.ReleaseDate))
@@ -233,7 +228,7 @@
                                 @FieldDiv("Release Description", Request.ReleaseDescription)
                                 @FieldDiv("Notes To SCM", Request.NotesToScm)
                             </div>
-                            <h4 class="scm3-detail-subsection-title">DCNs</h4>
+                            <h4 class="detail-subsection-title">DCNs</h4>
                             <TelerikGrid Data="@(_supplierCsciAttrs?.Dcns ?? [])">
                                 <GridColumns>
                                     <GridColumn Field="@nameof(SupplierCsciReleaseAttributes.DcnEntry.DcnNumber)" Title="DCN Number" />
@@ -244,8 +239,8 @@
                             break;
 
                         case "Third Party SW":
-                            <h4 class="scm3-detail-subsection-title">Product Information</h4>
-                            <div class="scm3-detail-fields">
+                            <h4 class="detail-subsection-title">Product Information</h4>
+                            <div class="detail-fields">
                                 @FieldDiv("Vendor", _thirdPartyAttrs?.Vendor)
                                 @FieldDiv("Product Name", _thirdPartyAttrs?.ProductName)
                                 @FieldDiv("Product Version", _thirdPartyAttrs?.ProductVersion)
@@ -261,8 +256,8 @@
                                 @FieldDiv("Point Of Contact", _thirdPartyAttrs?.PointOfContact)
                                 @FieldDiv("Binary / Source / Both", _thirdPartyAttrs?.BinarySourceOrBoth)
                             </div>
-                            <h4 class="scm3-detail-subsection-title">Licensing</h4>
-                            <div class="scm3-detail-fields">
+                            <h4 class="detail-subsection-title">Licensing</h4>
+                            <div class="detail-fields">
                                 @FieldDiv("License Type", _thirdPartyAttrs?.LicenseType)
                                 @FieldDiv("Product License", _thirdPartyAttrs?.ProductLicense)
                                 @FieldDiv("Contains OSS", _thirdPartyAttrs is null ? null : YesNo(_thirdPartyAttrs.ContainsOss))
@@ -282,7 +277,7 @@
                             break;
 
                         case "EE Request":
-                            <div class="scm3-detail-fields">
+                            <div class="detail-fields">
                                 @FieldDiv("Request ID", Request.RequestId.ToString())
                                 @FieldDiv("Part Number", _eeAttrs?.PartNumber)
                                 @FieldDiv("Assembly Part Number", _eeAttrs?.AssemblyPartNumber)
@@ -300,7 +295,7 @@
                             break;
 
                         default: @* TE Request — no DTO yet (root CLAUDE.md §17.1) *@
-                            <div class="scm3-detail-fields">
+                            <div class="detail-fields">
                                 @FieldDiv("Request ID", Request.RequestId.ToString())
                                 @FieldDiv("Name", Request.Title)
                                 @FieldDiv("Version", Request.Version)
@@ -311,7 +306,7 @@
                             </div>
                             @if (_attributeRows.Count > 0)
                             {
-                                <h4 class="scm3-detail-subsection-title">Type-Specific Details (legacy shape — TBD, root CLAUDE.md §17.1)</h4>
+                                <h4 class="detail-subsection-title">Type-Specific Details</h4>
                                 <TelerikGrid Data="@_attributeRows">
                                     <GridColumns>
                                         <GridColumn Field="@nameof(AttributeRow.Key)" Title="Attribute" />
@@ -325,12 +320,12 @@
             </div>
 
             @* ── Section 2 — Relationships ─────────────────────────── *@
-            <div id="section-relationships" class="scm3-detail-section-anchor">
+            <div id="section-relationships" class="detail-section-anchor">
                 <CollapsibleSection Title="Relationships" Expanded="false">
                     @switch (Request.RequestType?.Name)
                     {
                         case "System":
-                            <h4 class="scm3-detail-subsection-title">Associations — Segments</h4>
+                            <h4 class="detail-subsection-title">Associations — Segments</h4>
                             <TelerikGrid Data="@(_systemAttrs?.AssociatedSegments ?? [])">
                                 <GridColumns>
                                     <GridColumn Field="@nameof(SystemReleaseAttributes.SegmentAssociation.SegmentName)" Title="Segment Name" />
@@ -338,14 +333,14 @@
                                     <GridColumn Field="@nameof(SystemReleaseAttributes.SegmentAssociation.State)" Title="State" />
                                 </GridColumns>
                             </TelerikGrid>
-                            <h4 class="scm3-detail-subsection-title">Associated Items — Segments</h4>
+                            <h4 class="detail-subsection-title">Associated Items — Segments</h4>
                             <TelerikGrid Data="@(_systemAttrs?.AssociatedItemSegments ?? [])">
                                 <GridColumns>
                                     <GridColumn Field="@nameof(SystemReleaseAttributes.SegmentAssociatedItem.SegmentName)" Title="Segment Name" />
                                     <GridColumn Field="@nameof(SystemReleaseAttributes.SegmentAssociatedItem.Version)" Title="Version" />
                                 </GridColumns>
                             </TelerikGrid>
-                            <h4 class="scm3-detail-subsection-title">Compatible Software</h4>
+                            <h4 class="detail-subsection-title">Compatible Software</h4>
                             <TelerikGrid Data="@(_systemAttrs?.CompatibleSoftware ?? [])">
                                 <GridColumns>
                                     <GridColumn Field="@nameof(SystemReleaseAttributes.CompatibleSoftwareEntry.Name)" Title="Name" />
@@ -355,7 +350,7 @@
                             break;
 
                         case "Segment":
-                            <h4 class="scm3-detail-subsection-title">Associations — CSCIs</h4>
+                            <h4 class="detail-subsection-title">Associations — CSCIs</h4>
                             <TelerikGrid Data="@(_segmentAttrs?.AssociatedCscis ?? [])">
                                 <GridColumns>
                                     <GridColumn Field="@nameof(SegmentReleaseAttributes.CsciAssociation.CsciName)" Title="CSCI Name" />
@@ -366,28 +361,28 @@
                             break;
 
                         case "CSCI GA-ASI":
-                            <h4 class="scm3-detail-subsection-title">Common Libraries</h4>
+                            <h4 class="detail-subsection-title">Common Libraries</h4>
                             <TelerikGrid Data="@(_asiCsciAttrs?.CommonLibraries ?? [])">
                                 <GridColumns>
                                     <GridColumn Field="@nameof(AsiCsciReleaseAttributes.CommonLibraryEntry.LibraryName)" Title="Library Name" />
                                     <GridColumn Field="@nameof(AsiCsciReleaseAttributes.CommonLibraryEntry.Version)" Title="Version" />
                                 </GridColumns>
                             </TelerikGrid>
-                            <h4 class="scm3-detail-subsection-title">Build Targets</h4>
+                            <h4 class="detail-subsection-title">Build Targets</h4>
                             <TelerikGrid Data="@(_asiCsciAttrs?.BuildTargets ?? [])">
                                 <GridColumns>
                                     <GridColumn Field="@nameof(AsiCsciReleaseAttributes.BuildTargetEntry.BuildTarget)" Title="Build Target" />
                                     <GridColumn Field="@nameof(AsiCsciReleaseAttributes.BuildTargetEntry.Platform)" Title="Platform" />
                                 </GridColumns>
                             </TelerikGrid>
-                            <h4 class="scm3-detail-subsection-title">LRU Part Numbers</h4>
+                            <h4 class="detail-subsection-title">LRU Part Numbers</h4>
                             <TelerikGrid Data="@(_asiCsciAttrs?.LruPartNumbers ?? [])">
                                 <GridColumns>
                                     <GridColumn Field="@nameof(AsiCsciReleaseAttributes.LruPartNumberEntry.PartNumber)" Title="Part Number" />
                                     <GridColumn Field="@nameof(AsiCsciReleaseAttributes.LruPartNumberEntry.Description)" Title="Description" />
                                 </GridColumns>
                             </TelerikGrid>
-                            <h4 class="scm3-detail-subsection-title">Associated Third Party Software</h4>
+                            <h4 class="detail-subsection-title">Associated Third Party Software</h4>
                             <TelerikGrid Data="@(_asiCsciAttrs?.AssociatedThirdPartySoftware ?? [])">
                                 <GridColumns>
                                     <GridColumn Field="@nameof(AsiCsciReleaseAttributes.AssociatedThirdPartySoftwareEntry.Vendor)" Title="Vendor" />
@@ -398,14 +393,14 @@
                             break;
 
                         case "CSCI Supplier":
-                            <h4 class="scm3-detail-subsection-title">Binary Checksums</h4>
+                            <h4 class="detail-subsection-title">Binary Checksums</h4>
                             <TelerikGrid Data="@(_supplierCsciAttrs?.BinaryChecksums ?? [])">
                                 <GridColumns>
                                     <GridColumn Field="@nameof(SupplierCsciReleaseAttributes.BinaryChecksumEntry.Checksum)" Title="Checksum" />
                                     <GridColumn Field="@nameof(SupplierCsciReleaseAttributes.BinaryChecksumEntry.Algorithm)" Title="Algorithm" />
                                 </GridColumns>
                             </TelerikGrid>
-                            <h4 class="scm3-detail-subsection-title">LRE Part Numbers</h4>
+                            <h4 class="detail-subsection-title">LRE Part Numbers</h4>
                             <TelerikGrid Data="@(_supplierCsciAttrs?.LrePartNumbers ?? [])">
                                 <GridColumns>
                                     <GridColumn Field="@nameof(SupplierCsciReleaseAttributes.LrePartNumberEntry.PartNumber)" Title="Part Number" />
@@ -415,16 +410,16 @@
                             break;
 
                         default:
-                            <p class="scm3-muted">@(Request.RequestType?.Name ?? "This artifact type") has no relationships to other release artifacts (root CLAUDE.md §5).</p>
+                            <p class="text-muted">@(Request.RequestType?.Name ?? "This artifact type") has no relationships to other release artifacts (root CLAUDE.md §5).</p>
                             break;
                     }
                 </CollapsibleSection>
             </div>
 
             @* ── Section 3 — Attachments ───────────────────────────── *@
-            <div id="section-attachments" class="scm3-detail-section-anchor">
+            <div id="section-attachments" class="detail-section-anchor">
                 <CollapsibleSection Title="@($"Attachments ({_attachments.Count})")" Expanded="false">
-                    <p class="scm3-muted">Upload categories for this artifact type: @AttachmentCategories</p>
+                    <p class="text-muted">Upload categories for this artifact type: @AttachmentCategories</p>
                     <TelerikGrid Data="@_attachments">
                         <GridColumns>
                             <GridColumn Field="@nameof(RequestAttachment.FileName)" Title="File" />
@@ -445,9 +440,9 @@
             </div>
 
             @* ── Section 4 — SCM Status ────────────────────────────── *@
-            <div id="section-scm-status" class="scm3-detail-section-anchor">
+            <div id="section-scm-status" class="detail-section-anchor">
                 <CollapsibleSection Title="SCM Status" Expanded="false">
-                    <div class="scm3-detail-fields">
+                    <div class="detail-fields">
                         @FieldDiv("Assigned To", _scmStatus?.AssignedTo?.FullName ?? "Unassigned")
                         @FieldDiv("SCM Status", _scmStatus?.Status)
                         @FieldDiv("Reviewer Notes", _scmStatus?.ReviewerNotes)
@@ -457,7 +452,7 @@
                             @FieldDiv("Release Readiness Notes", _scmStatus?.ReleaseReadinessNotes)
                         }
                     </div>
-                    <p class="scm3-muted">
+                    <p class="text-muted">
                         Expected Completion Date · On Hold · Work Description · SCM Notes are named in
                         the field reference (root CLAUDE.md §5) but aren't yet columns on
                         <code>RequestSCMStatus</code> — see SCM3.Data/CLAUDE.md.
@@ -465,7 +460,7 @@
 
                     @if (CurrentUser.IsInRole("SCM_Staff", "SCM_Admin"))
                     {
-                        <div class="scm3-scm-status-edit">
+                        <div class="scm-status-edit">
                             <label>Assign to
                                 <TelerikDropDownList Data="@_staffDropDownItems"
                                                     @bind-Value="_scmAssigneeUserId"
@@ -496,9 +491,9 @@
             </div>
 
             @* ── Section 5 — Audit Log ─────────────────────────────── *@
-            <div id="section-audit-log" class="scm3-detail-section-anchor">
+            <div id="section-audit-log" class="detail-section-anchor">
                 <CollapsibleSection Title="Audit Log" Expanded="false">
-                    <h4 class="scm3-detail-subsection-title">State Changes</h4>
+                    <h4 class="detail-subsection-title">State Changes</h4>
                     <TelerikGrid Data="@_history">
                         <GridColumns>
                             <GridColumn Title="Transition">
@@ -521,10 +516,10 @@
                         </GridColumns>
                     </TelerikGrid>
 
-                    <h4 class="scm3-detail-subsection-title">@($"Notes ({_notes.Count})")</h4>
+                    <h4 class="detail-subsection-title">@($"Notes ({_notes.Count})")</h4>
                     @if (CurrentUser.CanEdit(Request) || CurrentUser.IsInRole("SCM_Staff", "SCM_Admin"))
                     {
-                        <div class="scm3-note-composer">
+                        <div class="note-composer">
                             <TelerikTextArea @bind-Value="_newNoteText" Placeholder="Add a note..." Rows="2" Width="100%" />
                             <TelerikButton Enabled="@(!_busy && !string.IsNullOrWhiteSpace(_newNoteText))"
                                            OnClick="AddNoteAsync">Add</TelerikButton>
@@ -532,15 +527,15 @@
                     }
                     @if (_notes.Count == 0)
                     {
-                        <p class="scm3-muted">No notes yet.</p>
+                        <p class="text-muted">No notes yet.</p>
                     }
                     else
                     {
                         <TelerikListView Data="@_notes">
                             <Template Context="noteCtx">
-                                <div class="scm3-note-item">
-                                    <div class="scm3-note-meta"><strong>@(((RequestNote)noteCtx).Author?.FullName)</strong> · @(((RequestNote)noteCtx).LogDate.ToString("yyyy-MM-dd HH:mm"))</div>
-                                    <div class="scm3-note-text">@(((RequestNote)noteCtx).NoteText)</div>
+                                <div class="note-item">
+                                    <div class="note-meta"><strong>@(((RequestNote)noteCtx).Author?.FullName)</strong> · @(((RequestNote)noteCtx).LogDate.ToString("yyyy-MM-dd HH:mm"))</div>
+                                    <div class="note-text">@(((RequestNote)noteCtx).NoteText)</div>
                                 </div>
                             </Template>
                         </TelerikListView>
@@ -548,78 +543,84 @@
                 </CollapsibleSection>
             </div>
         </div>
-    </DrawerContent>
-    <Template Context="drawerItem">
-        <div class="scm3-drawer-panel">
-            <div class="scm3-drawer-panel-header">
-                <h3>@(_rightPanelMode == RightPanel.History ? "History" : "Change Log")</h3>
-                <TelerikButton OnClick="CloseRightPanel">✕</TelerikButton>
-            </div>
-            @if (_rightPanelMode == RightPanel.History)
-            {
-                @if (_history.Count == 0)
+
+    @if (_showRightPanel)
+    {
+        <div class="right-panel-overlay">
+            <aside class="drawer-panel" role="dialog" aria-modal="true"
+                   aria-label="@(_rightPanelMode == RightPanel.History ? "Request history" : "Request change log")">
+                <div class="drawer-panel-header">
+                    <h3>@(_rightPanelMode == RightPanel.History ? "History" : "Change Log")</h3>
+                    <TelerikButton OnClick="CloseRightPanel"
+                                   Icon="@Telerik.SvgIcons.SvgIcon.X"
+                                   AriaLabel="Close panel" />
+                </div>
+                @if (_rightPanelMode == RightPanel.History)
                 {
-                    <p class="scm3-muted">No transitions recorded yet.</p>
+                    @if (_history.Count == 0)
+                    {
+                        <p class="text-muted">No transitions recorded yet.</p>
+                    }
+                    else
+                    {
+                        <TelerikGrid Data="@_history">
+                            <GridColumns>
+                                <GridColumn Title="Transition">
+                                    <Template Context="historyCtx">
+                                        @(((RequestHistory)historyCtx).FromStatus?.Name ?? "—") → @(((RequestHistory)historyCtx).ToStatus?.Name ?? "—")
+                                    </Template>
+                                </GridColumn>
+                                <GridColumn Field="@nameof(RequestHistory.Action)" Title="Action" />
+                                <GridColumn Title="By">
+                                    <Template Context="historyCtx">
+                                        @(((RequestHistory)historyCtx).ActionBy?.FullName ?? "—")
+                                    </Template>
+                                </GridColumn>
+                                <GridColumn Field="@nameof(RequestHistory.LogDate)" Title="Date" DisplayFormat="{0:yyyy-MM-dd HH:mm}" />
+                                <GridColumn Title="Comment">
+                                    <Template Context="historyCtx">
+                                        @(((RequestHistory)historyCtx).Comment ?? "—")
+                                    </Template>
+                                </GridColumn>
+                            </GridColumns>
+                        </TelerikGrid>
+                    }
                 }
                 else
                 {
-                    <TelerikGrid Data="@_history">
-                        <GridColumns>
-                            <GridColumn Title="Transition">
-                                <Template Context="historyCtx">
-                                    @(((RequestHistory)historyCtx).FromStatus?.Name ?? "—") → @(((RequestHistory)historyCtx).ToStatus?.Name ?? "—")
-                                </Template>
-                            </GridColumn>
-                            <GridColumn Field="@nameof(RequestHistory.Action)" Title="Action" />
-                            <GridColumn Title="By">
-                                <Template Context="historyCtx">
-                                    @(((RequestHistory)historyCtx).ActionBy?.FullName ?? "—")
-                                </Template>
-                            </GridColumn>
-                            <GridColumn Field="@nameof(RequestHistory.LogDate)" Title="Date" DisplayFormat="{0:yyyy-MM-dd HH:mm}" />
-                            <GridColumn Title="Comment">
-                                <Template Context="historyCtx">
-                                    @(((RequestHistory)historyCtx).Comment ?? "—")
-                                </Template>
-                            </GridColumn>
-                        </GridColumns>
-                    </TelerikGrid>
+                    @if (_changeLog.Count == 0)
+                    {
+                        <p class="text-muted">No field changes recorded yet.</p>
+                    }
+                    else
+                    {
+                        <TelerikGrid Data="@_changeLog">
+                            <GridColumns>
+                                <GridColumn Field="@nameof(RequestChangeLog.FieldName)" Title="Field" />
+                                <GridColumn Title="Old">
+                                    <Template Context="changeCtx">
+                                        @(((RequestChangeLog)changeCtx).OldValue ?? "—")
+                                    </Template>
+                                </GridColumn>
+                                <GridColumn Title="New">
+                                    <Template Context="changeCtx">
+                                        @(((RequestChangeLog)changeCtx).NewValue ?? "—")
+                                    </Template>
+                                </GridColumn>
+                                <GridColumn Title="By">
+                                    <Template Context="changeCtx">
+                                        @(((RequestChangeLog)changeCtx).ChangedBy?.FullName ?? "—")
+                                    </Template>
+                                </GridColumn>
+                                <GridColumn Field="@nameof(RequestChangeLog.LogDate)" Title="Date" DisplayFormat="{0:yyyy-MM-dd HH:mm}" />
+                            </GridColumns>
+                        </TelerikGrid>
+                    }
                 }
-            }
-            else
-            {
-                @if (_changeLog.Count == 0)
-                {
-                    <p class="scm3-muted">No field changes recorded yet.</p>
-                }
-                else
-                {
-                    <TelerikGrid Data="@_changeLog">
-                        <GridColumns>
-                            <GridColumn Field="@nameof(RequestChangeLog.FieldName)" Title="Field" />
-                            <GridColumn Title="Old">
-                                <Template Context="changeCtx">
-                                    @(((RequestChangeLog)changeCtx).OldValue ?? "—")
-                                </Template>
-                            </GridColumn>
-                            <GridColumn Title="New">
-                                <Template Context="changeCtx">
-                                    @(((RequestChangeLog)changeCtx).NewValue ?? "—")
-                                </Template>
-                            </GridColumn>
-                            <GridColumn Title="By">
-                                <Template Context="changeCtx">
-                                    @(((RequestChangeLog)changeCtx).ChangedBy?.FullName ?? "—")
-                                </Template>
-                            </GridColumn>
-                            <GridColumn Field="@nameof(RequestChangeLog.LogDate)" Title="Date" DisplayFormat="{0:yyyy-MM-dd HH:mm}" />
-                        </GridColumns>
-                    </TelerikGrid>
-                }
-            }
+            </aside>
         </div>
-    </Template>
-</TelerikDrawer>
+    }
+</div>
 
 @code {
     [Parameter, EditorRequired]
@@ -658,7 +659,8 @@
     private ThirdPartySoftwareAttributes? _thirdPartyAttrs;
     private EeReleaseAttributes? _eeAttrs;
 
-    // Five sections are now TelerikTabStrip tabs; History/ChangeLog use TelerikDrawer.
+    // History and Change Log use a component-local right overlay so this detail panel
+    // does not nest a second TelerikDrawer inside the application's navigation drawer.
     private bool _showRightPanel;
     private RightPanel _rightPanelMode;
     private bool _busy;
@@ -877,7 +879,7 @@
         }
     }
 
-    // TelerikDrawer right-panel controls
+    // Component-local right-panel controls
     private void ShowHistory() { _rightPanelMode = RightPanel.History; _showRightPanel = true; }
     private void ShowChangeLog() { _rightPanelMode = RightPanel.ChangeLog; _showRightPanel = true; }
     private void CloseRightPanel() => _showRightPanel = false;
@@ -965,10 +967,10 @@
         }
     }
 
-    // Renders one labelled value matching the .scm3-detail-fields grid — the building
+    // Renders one labelled value matching the .detail-fields grid — the building
     // block for every per-type Release Information / Relationships field list below.
     private static RenderFragment FieldDiv(string label, string? value) => @<div>
-        <span class="scm3-detail-info-label">@label</span><span>@(string.IsNullOrWhiteSpace(value) ? "—" : value)</span>
+        <span class="detail-info-label">@label</span><span>@(string.IsNullOrWhiteSpace(value) ? "—" : value)</span>
     </div>;
 
     // Attachment categories are named per artifact type in the field reference (root
